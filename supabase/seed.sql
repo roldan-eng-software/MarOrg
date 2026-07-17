@@ -1,0 +1,3 @@
+-- Seed data: initial admin profile
+-- This should be run after a user is created in Supabase Auth
+-- Example: INSERT INTO profiles (id, full_name, role) VALUES ('uuid-from-auth', 'Administrador', 'admin');
