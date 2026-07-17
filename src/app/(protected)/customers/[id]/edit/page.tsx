@@ -164,6 +164,39 @@ export default function CustomerEditPage() {
             <CardTitle>Endereço</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <Input
+              id="address_zip"
+              label="CEP"
+              value={addressZip ?? ""}
+              onChange={(e) => handleCepChange(e.target.value)}
+              placeholder="00000000"
+              maxLength={8}
+              error={cepError || errors.address_zip?.message}
+              rightElement={
+                cepLoading ? (
+                  <svg
+                    className="h-4 w-4 animate-spin text-[#5B3A29]"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                ) : null
+              }
+            />
             <div className="grid grid-cols-[1fr_auto] gap-4">
               <Input
                 id="address_street"
@@ -200,39 +233,6 @@ export default function CustomerEditPage() {
                 {...register("address_state")}
               />
             </div>
-            <Input
-              id="address_zip"
-              label="CEP"
-              value={addressZip ?? ""}
-              onChange={(e) => handleCepChange(e.target.value)}
-              placeholder="00000000"
-              maxLength={8}
-              error={cepError || errors.address_zip?.message}
-              rightElement={
-                cepLoading ? (
-                  <svg
-                    className="h-4 w-4 animate-spin text-[#5B3A29]"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                ) : null
-              }
-            />
           </CardContent>
         </Card>
 
