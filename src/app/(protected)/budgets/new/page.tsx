@@ -17,7 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
-import type { Customer } from "@/types";
+import { FurnitureSelect } from "@/components/furniture-select";
+import type { Customer, FurnitureTemplate } from "@/types";
 
 export default function BudgetNewPage() {
   const router = useRouter();
@@ -29,11 +30,13 @@ export default function BudgetNewPage() {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<BudgetFormData>({
     resolver: zodResolver(budgetSchema),
     defaultValues: {
       validity_days: 30,
+      delivery_days: 30,
       items: [
         {
           item_type: "mobiliario",
@@ -77,6 +80,7 @@ export default function BudgetNewPage() {
           customer_id: data.customer_id,
           status: "rascunho",
           validity_days: data.validity_days,
+          delivery_days: data.delivery_days,
           notes_internal: data.notes_internal || null,
           notes_client: data.notes_client || null,
           created_by: "",
@@ -133,6 +137,12 @@ export default function BudgetNewPage() {
               label="Validade (dias)"
               type="number"
               {...register("validity_days")}
+            />
+            <Input
+              id="delivery_days"
+              label="Prazo de Entrega (dias)"
+              type="number"
+              {...register("delivery_days")}
             />
           </CardContent>
         </Card>
@@ -193,12 +203,32 @@ export default function BudgetNewPage() {
                       { value: "servico", label: "Serviço" },
                     ]}
                   />
-                  <Input
-                    id={`items.${index}.description`}
-                    label="Descrição *"
-                    {...register(`items.${index}.description`)}
-                    error={errors.items?.[index]?.description?.message}
-                  />
+                  {watch(`items.${index}.item_type`) === "mobiliario" ? (
+                    <FurnitureSelect
+                      value={watch(`items.${index}.description`)}
+                      onChange={(val) => {
+                        setValue(`items.${index}.description`, val);
+                      }}
+                      onSelectTemplate={(template: FurnitureTemplate) => {
+                        setValue(`items.${index}.description`, template.name);
+                        if (template.default_material) setValue(`items.${index}.material`, template.default_material);
+                        if (template.default_unit) setValue(`items.${index}.unit`, template.default_unit);
+                        if (template.default_price) setValue(`items.${index}.unit_price`, template.default_price);
+                        if (template.default_width_cm) setValue(`items.${index}.width_cm`, template.default_width_cm);
+                        if (template.default_depth_cm) setValue(`items.${index}.depth_cm`, template.default_depth_cm);
+                        if (template.default_height_cm) setValue(`items.${index}.height_cm`, template.default_height_cm);
+                        if (template.default_finish) setValue(`items.${index}.finish`, template.default_finish);
+                      }}
+                      error={errors.items?.[index]?.description?.message}
+                    />
+                  ) : (
+                    <Input
+                      id={`items.${index}.description`}
+                      label="Descrição *"
+                      {...register(`items.${index}.description`)}
+                      error={errors.items?.[index]?.description?.message}
+                    />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-4 gap-4">

@@ -42,6 +42,7 @@ export interface Budget {
     | "revisado";
   version: number;
   validity_days: number;
+  delivery_days: number;
   notes_internal: string | null;
   notes_client: string | null;
   total_amount: number;
@@ -113,4 +114,22 @@ export interface AuditLog {
   new_values: Record<string, unknown> | null;
   ip_address: string | null;
   created_at: string;
+}
+
+export interface FurnitureTemplate {
+  id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  default_material: string | null;
+  default_unit: string;
+  default_price: number;
+  default_width_cm: number | null;
+  default_depth_cm: number | null;
+  default_height_cm: number | null;
+  default_finish: string | null;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }

@@ -24,6 +24,7 @@ export type BudgetItemFormData = z.infer<typeof budgetItemSchema>;
 export const budgetSchema = z.object({
   customer_id: z.string().uuid("Selecione um cliente"),
   validity_days: z.coerce.number().min(1).max(365).default(30),
+  delivery_days: z.coerce.number().min(0).max(365).default(30),
   notes_internal: z.string().optional().or(z.literal("")),
   notes_client: z.string().optional().or(z.literal("")),
   items: z

@@ -22,7 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
-import type { Customer, BudgetItem } from "@/types";
+import { FurnitureSelect } from "@/components/furniture-select";
+import type { Customer, BudgetItem, FurnitureTemplate } from "@/types";
 
 const statusLabels: Record<string, string> = {
   rascunho: "Rascunho",
@@ -58,6 +59,7 @@ export default function BudgetEditPage() {
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<BudgetFormData>({
     resolver: zodResolver(budgetSchema),
@@ -80,6 +82,7 @@ export default function BudgetEditPage() {
       reset({
         customer_id: budget.customer_id,
         validity_days: budget.validity_days,
+        delivery_days: budget.delivery_days ?? 30,
         notes_internal: budget.notes_internal ?? "",
         notes_client: budget.notes_client ?? "",
         items: budget.items.map((item: BudgetItem) => ({
@@ -120,6 +123,7 @@ export default function BudgetEditPage() {
         {
           customer_id: data.customer_id,
           validity_days: data.validity_days,
+          delivery_days: data.delivery_days,
           notes_internal: data.notes_internal || null,
           notes_client: data.notes_client || null,
         },
@@ -201,6 +205,13 @@ export default function BudgetEditPage() {
               {...register("validity_days")}
               disabled={!canEdit}
             />
+            <Input
+              id="delivery_days"
+              label="Prazo de Entrega (dias)"
+              type="number"
+              {...register("delivery_days")}
+              disabled={!canEdit}
+            />
           </CardContent>
         </Card>
 
@@ -263,13 +274,34 @@ export default function BudgetEditPage() {
                       { value: "servico", label: "Serviço" },
                     ]}
                   />
-                  <Input
-                    id={`items.${index}.description`}
-                    label="Descrição *"
-                    {...register(`items.${index}.description`)}
-                    disabled={!canEdit}
-                    error={errors.items?.[index]?.description?.message}
-                  />
+                  {watch(`items.${index}.item_type`) === "mobiliario" ? (
+                    <FurnitureSelect
+                      value={watch(`items.${index}.description`)}
+                      onChange={(val) => {
+                        setValue(`items.${index}.description`, val);
+                      }}
+                      onSelectTemplate={(template: FurnitureTemplate) => {
+                        setValue(`items.${index}.description`, template.name);
+                        if (template.default_material) setValue(`items.${index}.material`, template.default_material);
+                        if (template.default_unit) setValue(`items.${index}.unit`, template.default_unit);
+                        if (template.default_price) setValue(`items.${index}.unit_price`, template.default_price);
+                        if (template.default_width_cm) setValue(`items.${index}.width_cm`, template.default_width_cm);
+                        if (template.default_depth_cm) setValue(`items.${index}.depth_cm`, template.default_depth_cm);
+                        if (template.default_height_cm) setValue(`items.${index}.height_cm`, template.default_height_cm);
+                        if (template.default_finish) setValue(`items.${index}.finish`, template.default_finish);
+                      }}
+                      error={errors.items?.[index]?.description?.message}
+                      disabled={!canEdit}
+                    />
+                  ) : (
+                    <Input
+                      id={`items.${index}.description`}
+                      label="Descrição *"
+                      {...register(`items.${index}.description`)}
+                      disabled={!canEdit}
+                      error={errors.items?.[index]?.description?.message}
+                    />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-4 gap-4">
