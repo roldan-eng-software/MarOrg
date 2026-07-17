@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import {
   type CustomerFormData,
 } from "@/lib/validations/customer";
 import { createCustomerServer } from "@/modules/customers/services/customers.actions";
+import { useCep } from "@/lib/utils/cep";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,10 +23,39 @@ export default function CustomerNewPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
   });
+
+  const addressZip = watch("address_zip");
+
+  const handleAddressFound = useCallback(
+    (data: {
+      address_street: string;
+      address_neighborhood: string;
+      address_city: string;
+      address_state: string;
+    }) => {
+      setValue("address_street", data.address_street);
+      setValue("address_neighborhood", data.address_neighborhood);
+      setValue("address_city", data.address_city);
+      setValue("address_state", data.address_state);
+    },
+    [setValue]
+  );
+
+  const { loading: cepLoading, error: cepError, fetchCep } = useCep(handleAddressFound);
+
+  function handleCepChange(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    setValue("address_zip", digits);
+    if (digits.length === 8) {
+      fetchCep(digits);
+    }
+  }
 
   async function onSubmit(data: CustomerFormData) {
     try {
@@ -143,7 +173,35 @@ export default function CustomerNewPage() {
             <Input
               id="address_zip"
               label="CEP"
-              {...register("address_zip")}
+              value={addressZip ?? ""}
+              onChange={(e) => handleCepChange(e.target.value)}
+              placeholder="00000000"
+              maxLength={8}
+              error={cepError || errors.address_zip?.message}
+              rightElement={
+                cepLoading ? (
+                  <svg
+                    className="h-4 w-4 animate-spin text-[#5B3A29]"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                ) : null
+              }
             />
           </CardContent>
         </Card>

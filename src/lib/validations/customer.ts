@@ -19,7 +19,11 @@ export const customerSchema = z.object({
     .length(2, "Estado deve ter 2 caracteres (UF)")
     .optional()
     .or(z.literal("")),
-  address_zip: z.string().optional().or(z.literal("")),
+  address_zip: z
+    .string()
+    .regex(/^\d{8}$/, "CEP deve ter 8 dígitos")
+    .optional()
+    .or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
 });
 
