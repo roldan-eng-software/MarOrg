@@ -3,7 +3,7 @@ import { LoginForm } from "@/modules/auth/components/login-form";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F5F0EB] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#ad721ae7] px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">
