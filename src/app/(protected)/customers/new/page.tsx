@@ -1,96 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   customerSchema,
   type CustomerFormData,
 } from "@/lib/validations/customer";
-import { createCustomerServer, getCustomerServer, updateCustomerServer } from "@/modules/customers/services/customers.actions";
+import { createCustomerServer } from "@/modules/customers/services/customers.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showToast } from "@/components/ui/toast";
-import { useEffect as useEff } from "react";
 
-export default function CustomerFormPage() {
+export default function CustomerNewPage() {
   const router = useRouter();
-  const params = useParams();
-  const isEdit = !!params.id;
   const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
   });
 
-  useEff(() => {
-    if (isEdit) {
-      getCustomerServer(params.id as string).then((customer) => {
-        reset({
-          full_name: customer.full_name,
-          email: customer.email ?? "",
-          phone: customer.phone,
-          phone_secondary: customer.phone_secondary ?? "",
-          cpf_cnpj: customer.cpf_cnpj ?? "",
-          address_street: customer.address_street ?? "",
-          address_number: customer.address_number ?? "",
-          address_complement: customer.address_complement ?? "",
-          address_neighborhood: customer.address_neighborhood ?? "",
-          address_city: customer.address_city ?? "",
-          address_state: customer.address_state ?? "",
-          address_zip: customer.address_zip ?? "",
-          notes: customer.notes ?? "",
-        });
-      });
-    }
-  }, [isEdit, params.id, reset]);
-
   async function onSubmit(data: CustomerFormData) {
     try {
       setLoading(true);
-      if (isEdit) {
-        await updateCustomerServer(params.id as string, {
-          ...data,
-          email: data.email || null,
-          phone_secondary: data.phone_secondary || null,
-          cpf_cnpj: data.cpf_cnpj || null,
-          address_street: data.address_street || null,
-          address_number: data.address_number || null,
-          address_complement: data.address_complement || null,
-          address_neighborhood: data.address_neighborhood || null,
-          address_city: data.address_city || null,
-          address_state: data.address_state || null,
-          address_zip: data.address_zip || null,
-          notes: data.notes || null,
-        });
-        showToast("Cliente atualizado com sucesso", "success");
-      } else {
-        await createCustomerServer({
-          ...data,
-          email: data.email || null,
-          phone_secondary: data.phone_secondary || null,
-          cpf_cnpj: data.cpf_cnpj || null,
-          address_street: data.address_street || null,
-          address_number: data.address_number || null,
-          address_complement: data.address_complement || null,
-          address_neighborhood: data.address_neighborhood || null,
-          address_city: data.address_city || null,
-          address_state: data.address_state || null,
-          address_zip: data.address_zip || null,
-          notes: data.notes || null,
-          active: true,
-          created_by: "",
-        });
-        showToast("Cliente criado com sucesso", "success");
-      }
+      await createCustomerServer({
+        ...data,
+        email: data.email || null,
+        phone_secondary: data.phone_secondary || null,
+        cpf_cnpj: data.cpf_cnpj || null,
+        address_street: data.address_street || null,
+        address_number: data.address_number || null,
+        address_complement: data.address_complement || null,
+        address_neighborhood: data.address_neighborhood || null,
+        address_city: data.address_city || null,
+        address_state: data.address_state || null,
+        address_zip: data.address_zip || null,
+        notes: data.notes || null,
+        active: true,
+        created_by: "",
+      });
+      showToast("Cliente criado com sucesso", "success");
       router.push("/customers");
     } catch {
       showToast("Erro ao salvar cliente", "error");
@@ -101,9 +57,7 @@ export default function CustomerFormPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-[#3D2519]">
-        {isEdit ? "Editar Cliente" : "Novo Cliente"}
-      </h1>
+      <h1 className="text-2xl font-bold text-[#3D2519]">Novo Cliente</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card>
@@ -216,7 +170,7 @@ export default function CustomerFormPage() {
             Cancelar
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? "Salvando..." : isEdit ? "Salvar" : "Criar Cliente"}
+            {loading ? "Salvando..." : "Criar Cliente"}
           </Button>
         </div>
       </form>

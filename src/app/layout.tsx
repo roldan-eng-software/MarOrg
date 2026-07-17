@@ -6,6 +6,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Roldan Marcenaria — Sistema de Gestão",
   description: "Sistema de gestão para marcenaria sob medida",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

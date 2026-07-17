@@ -15,7 +15,10 @@ export async function generateBudgetNumber(): Promise<string> {
     .order("budget_number", { ascending: false })
     .limit(1);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error generating budget number:", error.message);
+    return `ORC-${year}-0001`;
+  }
 
   let nextSeq = 1;
   if (data && data.length > 0) {
@@ -40,7 +43,10 @@ export async function listBudgets(status?: string) {
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.error("Error listing budgets:", error.message);
+    return [] as (Budget & { customers: { full_name: string; phone: string } })[];
+  }
   return data as (Budget & { customers: { full_name: string; phone: string } })[];
 }
 
@@ -53,7 +59,10 @@ export async function getBudget(id: string) {
     .eq("id", id)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error getting budget:", error.message);
+    throw new Error("Orçamento não encontrado");
+  }
 
   const { data: items, error: itemsError } = await supabase
     .from("budget_items")
@@ -61,7 +70,10 @@ export async function getBudget(id: string) {
     .eq("budget_id", id)
     .order("sort_order");
 
-  if (itemsError) throw itemsError;
+  if (itemsError) {
+    console.error("Error getting budget items:", itemsError.message);
+    throw new Error("Erro ao carregar itens do orçamento");
+  }
 
   return {
     ...budget,
@@ -80,6 +92,10 @@ export async function createBudget(
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    throw new Error("Usuário não autenticado");
+  }
+
   const budget_number = await generateBudgetNumber();
 
   const { data: newBudget, error } = await supabase
@@ -88,12 +104,15 @@ export async function createBudget(
       ...budget,
       budget_number,
       version: 1,
-      created_by: user?.id ?? "",
+      created_by: user.id,
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error creating budget:", error.message);
+    throw new Error("Erro ao criar orçamento");
+  }
 
   if (items.length > 0) {
     const { error: itemsError } = await supabase.from("budget_items").insert(
@@ -103,7 +122,10 @@ export async function createBudget(
         sort_order: i,
       }))
     );
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error("Error creating budget items:", itemsError.message);
+      throw new Error("Erro ao criar itens do orçamento");
+    }
   }
 
   return newBudget as Budget;
@@ -122,7 +144,10 @@ export async function updateBudget(
     .eq("id", id)
     .single();
 
-  if (fetchError) throw fetchError;
+  if (fetchError) {
+    console.error("Error fetching budget:", fetchError.message);
+    throw new Error("Orçamento não encontrado");
+  }
   if (["aprovado", "recusado", "vencido"].includes(existing.status)) {
     throw new Error("Não é possível editar orçamento com status final");
   }
@@ -132,7 +157,10 @@ export async function updateBudget(
     .update(budget)
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error updating budget:", error.message);
+    throw new Error("Erro ao atualizar orçamento");
+  }
 
   if (items) {
     await supabase.from("budget_items").delete().eq("budget_id", id);
@@ -148,7 +176,10 @@ export async function updateBudget(
             sort_order: i,
           }))
         );
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error("Error updating budget items:", itemsError.message);
+        throw new Error("Erro ao atualizar itens do orçamento");
+      }
     }
   }
 
@@ -172,5 +203,8 @@ export async function updateBudgetStatus(
     .update(updateData)
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error updating budget status:", error.message);
+    throw new Error("Erro ao atualizar status do orçamento");
+  }
 }

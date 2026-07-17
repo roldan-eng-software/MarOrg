@@ -57,7 +57,9 @@ export default function BudgetNewPage() {
   const items = watch("items");
 
   useEffect(() => {
-    listCustomersServer().then(setCustomers);
+    listCustomersServer()
+      .then(setCustomers)
+      .catch(() => setCustomers([]));
   }, []);
 
   const totalAmount = items.reduce((sum, item) => {

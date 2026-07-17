@@ -19,7 +19,10 @@ export async function listCustomersServer(search?: string) {
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.error("Error listing customers:", error.message);
+    return [] as Customer[];
+  }
   return data as Customer[];
 }
 
@@ -32,7 +35,10 @@ export async function getCustomerServer(id: string) {
     .eq("id", id)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error getting customer:", error.message);
+    throw new Error("Cliente não encontrado");
+  }
   return data as Customer;
 }
 
@@ -45,13 +51,20 @@ export async function createCustomerServer(
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    throw new Error("Usuário não autenticado");
+  }
+
   const { data: customer, error } = await supabase
     .from("customers")
-    .insert({ ...data, created_by: user?.id ?? "" })
+    .insert({ ...data, created_by: user.id })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error creating customer:", error.message);
+    throw new Error("Erro ao criar cliente");
+  }
   return customer as Customer;
 }
 
@@ -68,7 +81,10 @@ export async function updateCustomerServer(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error updating customer:", error.message);
+    throw new Error("Erro ao atualizar cliente");
+  }
   return customer as Customer;
 }
 
@@ -80,5 +96,8 @@ export async function deleteCustomerServer(id: string) {
     .update({ active: false })
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error deleting customer:", error.message);
+    throw new Error("Erro ao excluir cliente");
+  }
 }
