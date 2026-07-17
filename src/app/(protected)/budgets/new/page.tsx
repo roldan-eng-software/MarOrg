@@ -37,6 +37,9 @@ export default function BudgetNewPage() {
     defaultValues: {
       validity_days: 30,
       delivery_days: 30,
+      payment_conditions: "",
+      payment_installments: [],
+      payment_types: [],
       items: [
         {
           item_type: "mobiliario",
@@ -55,6 +58,11 @@ export default function BudgetNewPage() {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "items",
+  });
+
+  const { fields: installmentFields, append: appendInstallment, remove: removeInstallment } = useFieldArray({
+    control,
+    name: "payment_installments",
   });
 
   const items = watch("items");
@@ -83,6 +91,9 @@ export default function BudgetNewPage() {
           delivery_days: data.delivery_days,
           notes_internal: data.notes_internal || null,
           notes_client: data.notes_client || null,
+          payment_conditions: data.payment_conditions || null,
+          payment_installments: data.payment_installments || [],
+          payment_types: data.payment_types || [],
           created_by: "",
         },
         data.items.map((item, i) => ({
@@ -292,6 +303,113 @@ export default function BudgetNewPage() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Condições de Pagamento</CardTitle>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                appendInstallment({
+                  installment: installmentFields.length + 1,
+                  description: "",
+                  due_date: "",
+                  percentage: 0,
+                })
+              }
+            >
+              + Adicionar Parcela
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-[#3D2519] mb-2 block">
+                Formas de Pagamento
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {["PIX", "Boleto", "Cartão de Crédito", "Cartão de Débito", "Dinheiro", "Transferência", "Cheque"].map((type) => (
+                  <label
+                    key={type}
+                    className="flex items-center gap-1.5 rounded border border-[#D4C4B0] px-3 py-1.5 text-sm text-[#3D2519] cursor-pointer hover:bg-[#F5F0EB] has-[:checked]:bg-[#5B3A29] has-[:checked]:text-white has-[:checked]:border-[#5B3A29]"
+                  >
+                    <input
+                      type="checkbox"
+                      value={type}
+                      {...register("payment_types")}
+                      className="sr-only"
+                    />
+                    {type}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {installmentFields.length > 0 && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-[#3D2519]">
+                  Parcelas
+                </label>
+                {installmentFields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="flex items-end gap-3 rounded-md border border-[#D4C4B0] p-3"
+                  >
+                    <div className="w-16">
+                      <Input
+                        id={`payment_installments.${index}.installment`}
+                        label="Parcela"
+                        type="number"
+                        {...register(`payment_installments.${index}.installment`)}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        id={`payment_installments.${index}.description`}
+                        label="Descrição"
+                        {...register(`payment_installments.${index}.description`)}
+                        placeholder="Ex: Sinal, Entrega..."
+                      />
+                    </div>
+                    <div className="w-40">
+                      <Input
+                        id={`payment_installments.${index}.due_date`}
+                        label="Vencimento"
+                        type="date"
+                        {...register(`payment_installments.${index}.due_date`)}
+                      />
+                    </div>
+                    <div className="w-20">
+                      <Input
+                        id={`payment_installments.${index}.percentage`}
+                        label="%"
+                        type="number"
+                        step="0.01"
+                        {...register(`payment_installments.${index}.percentage`)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeInstallment(index)}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Textarea
+              id="payment_conditions"
+              label="Condições gerais de pagamento"
+              {...register("payment_conditions")}
+              placeholder="Ex: Entrada de 50% na aprovação, restante na entrega..."
+            />
           </CardContent>
         </Card>
 

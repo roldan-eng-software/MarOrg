@@ -21,10 +21,17 @@ export async function GET(
   try {
     const budget = await getBudget(id);
 
+    const { data: images } = await supabase
+      .from("budget_images")
+      .select("*")
+      .eq("budget_id", id)
+      .order("sort_order");
+
     const buffer = await generateBudgetPDF({
       budget,
       items: budget.items,
       customer: budget.customers,
+      images: images || [],
     });
 
     return new NextResponse(new Uint8Array(buffer), {

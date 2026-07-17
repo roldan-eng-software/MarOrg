@@ -83,7 +83,11 @@ export async function getBudget(id: string) {
 }
 
 export async function createBudget(
-  budget: Omit<Budget, "id" | "created_at" | "updated_at" | "total_amount" | "budget_number" | "version" | "sent_at" | "approved_at" | "refused_at">,
+  budget: Omit<Budget, "id" | "created_at" | "updated_at" | "total_amount" | "budget_number" | "version" | "sent_at" | "approved_at" | "refused_at"> & {
+    payment_conditions?: string | null;
+    payment_installments?: Budget["payment_installments"];
+    payment_types?: string[];
+  },
   items: Omit<BudgetItem, "id" | "created_at" | "budget_id">[]
 ) {
   const supabase = await createClient();
@@ -102,6 +106,9 @@ export async function createBudget(
     .from("budgets")
     .insert({
       ...budget,
+      payment_conditions: budget.payment_conditions ?? null,
+      payment_installments: budget.payment_installments ?? [],
+      payment_types: budget.payment_types ?? [],
       budget_number,
       version: 1,
       created_by: user.id,
@@ -133,7 +140,11 @@ export async function createBudget(
 
 export async function updateBudget(
   id: string,
-  budget: Partial<Omit<Budget, "id" | "created_at" | "updated_at">>,
+  budget: Partial<Omit<Budget, "id" | "created_at" | "updated_at">> & {
+    payment_conditions?: string | null;
+    payment_installments?: Budget["payment_installments"];
+    payment_types?: string[];
+  },
   items?: (Omit<BudgetItem, "id" | "created_at" | "budget_id"> & { id?: string })[]
 ) {
   const supabase = await createClient();

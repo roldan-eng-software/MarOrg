@@ -52,6 +52,9 @@ export interface Budget {
   sent_at: string | null;
   approved_at: string | null;
   refused_at: string | null;
+  payment_conditions: string | null;
+  payment_installments: PaymentInstallment[];
+  payment_types: string[];
 }
 
 export interface BudgetItem {
@@ -132,4 +135,20 @@ export interface FurnitureTemplate {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PaymentInstallment {
+  installment: number;
+  description: string;
+  due_date: string;
+  percentage: number;
+}
+
+export interface BudgetImage {
+  id: string;
+  budget_id: string;
+  image_url: string;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
 }

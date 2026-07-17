@@ -27,6 +27,14 @@ export const budgetSchema = z.object({
   delivery_days: z.coerce.number().min(0).max(365).default(30),
   notes_internal: z.string().optional().or(z.literal("")),
   notes_client: z.string().optional().or(z.literal("")),
+  payment_conditions: z.string().optional().or(z.literal("")),
+  payment_installments: z.array(z.object({
+    installment: z.number(),
+    description: z.string(),
+    due_date: z.string(),
+    percentage: z.coerce.number().min(0).max(100),
+  })).default([]),
+  payment_types: z.array(z.string()).default([]),
   items: z
     .array(budgetItemSchema)
     .min(1, "Adicione pelo menos um item ao orçamento"),
