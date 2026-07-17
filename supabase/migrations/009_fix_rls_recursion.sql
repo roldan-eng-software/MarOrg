@@ -1,13 +1,7 @@
--- Enable RLS on all tables
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE budget_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE communications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+-- Fix: infinite recursion in profiles RLS policies
+-- The policies were doing subqueries on profiles itself, causing infinite recursion.
+-- Solution: create a SECURITY DEFINER function that bypasses RLS.
 
--- Security definer function to avoid RLS recursion on profiles
 CREATE OR REPLACE FUNCTION public.user_role()
 RETURNS text
 LANGUAGE sql
@@ -17,6 +11,20 @@ SET search_path = public
 AS $$
   SELECT role FROM profiles WHERE id = auth.uid();
 $$;
+
+-- Drop existing policies that cause recursion
+DROP POLICY IF EXISTS "profiles_select" ON profiles;
+DROP POLICY IF EXISTS "profiles_update" ON profiles;
+DROP POLICY IF EXISTS "customers_insert" ON customers;
+DROP POLICY IF EXISTS "customers_update" ON customers;
+DROP POLICY IF EXISTS "budgets_insert" ON budgets;
+DROP POLICY IF EXISTS "budgets_update" ON budgets;
+DROP POLICY IF EXISTS "budget_items_insert" ON budget_items;
+DROP POLICY IF EXISTS "budget_items_update" ON budget_items;
+DROP POLICY IF EXISTS "budget_items_delete" ON budget_items;
+DROP POLICY IF EXISTS "documents_insert" ON documents;
+DROP POLICY IF EXISTS "communications_insert" ON communications;
+DROP POLICY IF EXISTS "audit_logs_select" ON audit_logs;
 
 -- profiles: users see their own profile; admin sees all
 CREATE POLICY "profiles_select" ON profiles
@@ -31,10 +39,7 @@ CREATE POLICY "profiles_update" ON profiles
     public.user_role() = 'admin'
   );
 
--- customers: all authenticated can list; only admin and commercial can create/edit
-CREATE POLICY "customers_select" ON customers
-  FOR SELECT USING (auth.role() = 'authenticated');
-
+-- customers: only admin and commercial can create/edit
 CREATE POLICY "customers_insert" ON customers
   FOR INSERT WITH CHECK (
     public.user_role() IN ('admin', 'comercial')
@@ -45,10 +50,7 @@ CREATE POLICY "customers_update" ON customers
     public.user_role() IN ('admin', 'comercial')
   );
 
--- budgets: all authenticated can list; only admin and commercial can create/edit
-CREATE POLICY "budgets_select" ON budgets
-  FOR SELECT USING (auth.role() = 'authenticated');
-
+-- budgets: only admin and commercial can create/edit
 CREATE POLICY "budgets_insert" ON budgets
   FOR INSERT WITH CHECK (
     public.user_role() IN ('admin', 'comercial')
@@ -60,15 +62,6 @@ CREATE POLICY "budgets_update" ON budgets
   );
 
 -- budget_items: inherits permissions from parent budget
-CREATE POLICY "budget_items_select" ON budget_items
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM budgets
-      WHERE budgets.id = budget_items.budget_id
-      AND auth.role() = 'authenticated'
-    )
-  );
-
 CREATE POLICY "budget_items_insert" ON budget_items
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -97,19 +90,13 @@ CREATE POLICY "budget_items_delete" ON budget_items
     )
   );
 
--- documents: all authenticated can view
-CREATE POLICY "documents_select" ON documents
-  FOR SELECT USING (auth.role() = 'authenticated');
-
+-- documents: only admin and commercial can create
 CREATE POLICY "documents_insert" ON documents
   FOR INSERT WITH CHECK (
     public.user_role() IN ('admin', 'comercial')
   );
 
--- communications: all authenticated can view; only admin and commercial can create
-CREATE POLICY "communications_select" ON communications
-  FOR SELECT USING (auth.role() = 'authenticated');
-
+-- communications: only admin and commercial can create
 CREATE POLICY "communications_insert" ON communications
   FOR INSERT WITH CHECK (
     public.user_role() IN ('admin', 'comercial')
