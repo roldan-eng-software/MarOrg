@@ -11,6 +11,7 @@ const navItems = [
   { href: "/customers", label: "Clientes" },
   { href: "/budgets", label: "Orçamentos" },
   { href: "/service-orders", label: "Ordens de Serviço" },
+  { href: "/inventory", label: "Estoque" },
   { href: "/furniture-templates", label: "Modelos de Móveis" },
   { href: "/settings", label: "Configurações" },
 ];

@@ -191,3 +191,31 @@ export interface ServiceOrderItem {
   sort_order: number;
   created_at: string;
 }
+
+export interface Material {
+  id: string;
+  name: string;
+  description: string | null;
+  category: "madeira" | "ferragem" | "acabamento" | "colante" | "vidro" | "fixacao" | "geral";
+  unit: string;
+  current_stock: number;
+  min_stock: number;
+  cost: number;
+  supplier: string | null;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StockMovement {
+  id: string;
+  material_id: string;
+  movement_type: "entrada" | "saida" | "ajuste" | "reserva" | "liberacao";
+  quantity: number;
+  reason: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
