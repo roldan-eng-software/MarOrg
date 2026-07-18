@@ -75,6 +75,10 @@ export default function BudgetSendPage() {
     }
   }
 
+  function handleDownloadPdf() {
+    window.open(`/api/pdf/${budgetId}`, "_blank");
+  }
+
   async function handleSendWhatsApp() {
     try {
       setLoading(true);
@@ -221,6 +225,21 @@ export default function BudgetSendPage() {
               </p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Download PDF */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Baixar PDF</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-[#8B7A6B]">
+            Baixe o PDF do orçamento para enviar ao cliente.
+          </p>
+          <Button onClick={handleDownloadPdf} className="w-full">
+            Baixar PDF do Orçamento
+          </Button>
         </CardContent>
       </Card>
 
