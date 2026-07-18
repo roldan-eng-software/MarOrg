@@ -152,3 +152,42 @@ export interface BudgetImage {
   sort_order: number;
   created_at: string;
 }
+
+export interface ServiceOrder {
+  id: string;
+  order_number: string;
+  budget_id: string;
+  customer_id: string;
+  status: "pendente" | "em_producao" | "acabamento" | "pronto" | "entregue" | "cancelada";
+  priority: "baixa" | "normal" | "alta" | "urgente";
+  start_date: string | null;
+  estimated_delivery: string | null;
+  actual_delivery: string | null;
+  responsible: string | null;
+  notes_internal: string | null;
+  notes_production: string | null;
+  total_amount: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceOrderItem {
+  id: string;
+  service_order_id: string;
+  budget_item_id: string | null;
+  item_type: "mobiliario" | "servico";
+  description: string;
+  material: string | null;
+  width_cm: number | null;
+  depth_cm: number | null;
+  height_cm: number | null;
+  finish: string | null;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+}

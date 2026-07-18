@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { FurnitureSelect } from "@/components/furniture-select";
+import { createServiceOrderFromBudget } from "@/modules/service-orders/services/service-orders.actions";
 import type { Customer, BudgetItem, FurnitureTemplate } from "@/types";
 
 const statusLabels: Record<string, string> = {
@@ -50,6 +51,7 @@ export default function BudgetEditPage() {
   const params = useParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [generatingOS, setGeneratingOS] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [budgetStatus, setBudgetStatus] = useState<string>("");
 
@@ -173,6 +175,19 @@ export default function BudgetEditPage() {
       showToast("Erro ao alterar status", "error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGenerateOS() {
+    try {
+      setGeneratingOS(true);
+      const order = await createServiceOrderFromBudget(params.id as string);
+      showToast("Ordem de serviço gerada com sucesso", "success");
+      router.push(`/service-orders/${order.id}`);
+    } catch {
+      showToast("Erro ao gerar ordem de serviço", "error");
+    } finally {
+      setGeneratingOS(false);
     }
   }
 
@@ -575,11 +590,20 @@ export default function BudgetEditPage() {
           </>
         )}
         {budgetStatus === "aprovado" && (
-          <Button
-            onClick={() => router.push(`/budgets/${params.id}/send`)}
-          >
-            Enviar PDF
-          </Button>
+          <>
+            <Button
+              variant="primary"
+              onClick={handleGenerateOS}
+              disabled={generatingOS}
+            >
+              {generatingOS ? "Gerando..." : "Gerar OS"}
+            </Button>
+            <Button
+              onClick={() => router.push(`/budgets/${params.id}/send`)}
+            >
+              Enviar PDF
+            </Button>
+          </>
         )}
       </div>
     </div>

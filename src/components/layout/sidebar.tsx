@@ -10,6 +10,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/customers", label: "Clientes" },
   { href: "/budgets", label: "Orçamentos" },
+  { href: "/service-orders", label: "Ordens de Serviço" },
   { href: "/furniture-templates", label: "Modelos de Móveis" },
   { href: "/settings", label: "Configurações" },
 ];
