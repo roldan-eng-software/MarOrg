@@ -95,7 +95,7 @@ export default function BudgetsListPage() {
                     <Badge variant={statusVariants[budget.status]}>
                       {statusLabels[budget.status]}
                     </Badge>
-                    <Link href={`/budgets/${budget.id}/edit`}>
+                    <Link href={`/budgets/${budget.id}`}>
                       <Button variant="ghost" size="sm">
                         Ver
                       </Button>
