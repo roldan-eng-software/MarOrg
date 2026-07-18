@@ -117,6 +117,18 @@ export default function ReportsPage() {
     loadReport(tab);
   }
 
+  async function handleExportPdf() {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      const url = `/api/reports/${activeTab}?${params.toString()}`;
+      window.open(url, "_blank");
+    } catch {
+      showToast("Erro ao exportar PDF", "error");
+    }
+  }
+
   useState(() => {
     loadReport("revenue");
   });
@@ -134,6 +146,9 @@ export default function ReportsPage() {
               onChange={(e) => setEndDate(e.target.value)} />
             <Button onClick={() => loadReport(activeTab)} disabled={loading}>
               {loading ? "Carregando..." : "Filtrar"}
+            </Button>
+            <Button onClick={handleExportPdf} disabled={loading} variant="secondary">
+              Exportar PDF
             </Button>
           </div>
         </CardContent>
