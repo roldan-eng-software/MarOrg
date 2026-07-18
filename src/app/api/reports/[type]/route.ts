@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { generateReportPDF } from "@/modules/documents/services/report-pdf.service";
 import {
   getRevenueReport,
@@ -21,6 +22,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ type: string }> }
 ) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
   const { type } = await params;
   const { searchParams } = new URL(request.url);
 

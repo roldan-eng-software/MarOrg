@@ -157,6 +157,17 @@ export async function createTransaction(
     throw new Error("Usuário não autenticado");
   }
 
+  // Verificar role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["admin", "financeiro"].includes(profile.role)) {
+    throw new Error("Sem permissão para criar transações");
+  }
+
   const { data, error } = await supabase
     .from("financial_transactions")
     .insert({ ...transaction, created_by: user.id })
@@ -177,6 +188,25 @@ export async function updateTransaction(
 ) {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Usuário não autenticado");
+  }
+
+  // Verificar role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["admin", "financeiro"].includes(profile.role)) {
+    throw new Error("Sem permissão para atualizar transações");
+  }
+
   const { error } = await supabase
     .from("financial_transactions")
     .update(transaction)
@@ -192,6 +222,25 @@ export async function updateTransaction(
 
 export async function deleteTransaction(id: string): Promise<void> {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Usuário não autenticado");
+  }
+
+  // Verificar role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["admin", "financeiro"].includes(profile.role)) {
+    throw new Error("Sem permissão para excluir transações");
+  }
 
   const { error } = await supabase
     .from("financial_transactions")

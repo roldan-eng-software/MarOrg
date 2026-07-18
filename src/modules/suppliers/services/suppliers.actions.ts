@@ -55,6 +55,17 @@ export async function createSupplier(
     throw new Error("Usuário não autenticado");
   }
 
+  // Verificar role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["admin", "comercial"].includes(profile.role)) {
+    throw new Error("Sem permissão para criar fornecedores");
+  }
+
   const { data, error } = await supabase
     .from("suppliers")
     .insert({ ...supplier, created_by: user.id })
@@ -75,6 +86,25 @@ export async function updateSupplier(
 ): Promise<{ id: string }> {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Usuário não autenticado");
+  }
+
+  // Verificar role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    throw new Error("Sem permissão para atualizar fornecedores");
+  }
+
   const { error } = await supabase
     .from("suppliers")
     .update(supplier)
@@ -90,6 +120,25 @@ export async function updateSupplier(
 
 export async function deleteSupplier(id: string): Promise<void> {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Usuário não autenticado");
+  }
+
+  // Verificar role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    throw new Error("Sem permissão para excluir fornecedores");
+  }
 
   const { error } = await supabase
     .from("suppliers")

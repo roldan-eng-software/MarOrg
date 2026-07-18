@@ -39,13 +39,10 @@ export default function SupplierNewPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
   });
-
-  const addressZip = watch("address_zip");
 
   const handleAddressFound = useCallback(
     (data: {

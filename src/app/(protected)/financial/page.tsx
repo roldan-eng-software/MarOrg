@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import {
@@ -107,7 +106,7 @@ export default function FinancialPage() {
     }
   }
 
-  function handleNewTransaction(type: "receita" | "despesa") {
+  function handleNewTransaction() {
     setEditingTransaction(null);
     setShowModal(true);
   }
@@ -162,10 +161,10 @@ export default function FinancialPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-[#3D2519]">Fluxo de Caixa</h1>
         <div className="flex gap-2">
-          <Button onClick={() => handleNewTransaction("receita")}>
+          <Button onClick={() => handleNewTransaction()}>
             + Receita
           </Button>
-          <Button variant="secondary" onClick={() => handleNewTransaction("despesa")}>
+          <Button variant="secondary" onClick={() => handleNewTransaction()}>
             + Despesa
           </Button>
         </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/components/ui/toast";
-import { formatCurrency, formatDate, formatPhone } from "@/lib/utils/format";
+import { formatCurrency, formatDate } from "@/lib/utils/format";
 
 interface CustomerBudget {
   id: string;

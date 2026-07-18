@@ -29,11 +29,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/api/health")
-  ) {
+  const pathname = request.nextUrl.pathname;
+
+  // Allow public routes
+  const publicPaths = ["/login", "/portal", "/api/portal", "/api/health"];
+  const isPublic = publicPaths.some((p) => pathname.startsWith(p));
+
+  if (!user && !isPublic) {
+    // For API routes, return 401 JSON instead of redirect
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Não autorizado" },
+        { status: 401 }
+      );
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

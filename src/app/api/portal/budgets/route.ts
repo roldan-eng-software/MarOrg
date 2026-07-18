@@ -1,7 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 10; // requests per minute
+const RATE_WINDOW = 60 * 1000; // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
+    return true;
+  }
+
+  if (record.count >= RATE_LIMIT) {
+    return false;
+  }
+
+  record.count++;
+  return true;
+}
+
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: "Muitas requisições. Tente novamente em 1 minuto." },
+      { status: 429 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const budgetNumber = searchParams.get("budget_number");
   const phone = searchParams.get("phone");
@@ -9,6 +40,17 @@ export async function GET(request: NextRequest) {
   if (!budgetNumber && !phone) {
     return NextResponse.json(
       { error: "Informe o número do orçamento ou telefone" },
+      { status: 400 }
+    );
+  }
+
+  // Input validation: sanitize
+  const sanitizedBudgetNumber = budgetNumber?.trim().replace(/[^A-Za-z0-9\-]/g, "") || null;
+  const sanitizedPhone = phone?.trim().replace(/\D/g, "") || null;
+
+  if (!sanitizedBudgetNumber && !sanitizedPhone) {
+    return NextResponse.json(
+      { error: "Dados inválidos" },
       { status: 400 }
     );
   }
@@ -21,8 +63,8 @@ export async function GET(request: NextRequest) {
     .in("status", ["enviado", "em_analise", "aprovado"])
     .order("created_at", { ascending: false });
 
-  if (budgetNumber) {
-    query = query.eq("budget_number", budgetNumber.toUpperCase());
+  if (sanitizedBudgetNumber) {
+    query = query.eq("budget_number", sanitizedBudgetNumber.toUpperCase());
   }
 
   const { data: budgets, error } = await query;
@@ -34,18 +76,20 @@ export async function GET(request: NextRequest) {
   // Filter by phone if provided (after fetching, since phone is in customers table)
   let filteredBudgets = budgets || [];
 
-  if (phone && !budgetNumber) {
-    const phoneDigits = phone.replace(/\D/g, "");
+  if (sanitizedPhone && !sanitizedBudgetNumber) {
     filteredBudgets = filteredBudgets.filter((b) => {
       const customer = b.customers as { phone: string } | null;
       if (!customer) return false;
       const customerPhoneDigits = customer.phone.replace(/\D/g, "");
-      return customerPhoneDigits.includes(phoneDigits) || phoneDigits.includes(customerPhoneDigits);
+      return customerPhoneDigits.includes(sanitizedPhone) || sanitizedPhone.includes(customerPhoneDigits);
     });
   }
 
-  // Format the response
-  const formattedBudgets = filteredBudgets.map((b) => ({
+  // Limit results to prevent enumeration
+  const limitedBudgets = filteredBudgets.slice(0, 5);
+
+  // Format the response (hide sensitive data)
+  const formattedBudgets = limitedBudgets.map((b) => ({
     id: b.id,
     budget_number: b.budget_number,
     status: b.status,

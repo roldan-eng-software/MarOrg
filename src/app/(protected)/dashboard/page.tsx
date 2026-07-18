@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import {
@@ -235,7 +234,7 @@ export default function DashboardPage() {
           <CardContent>
             <BarChart
               data={metrics.revenueByMonth.map((r) => {
-                const [year, month] = r.month.split("-");
+                const [, month] = r.month.split("-");
                 return {
                   label: monthNames[parseInt(month) - 1],
                   value: r.revenue,

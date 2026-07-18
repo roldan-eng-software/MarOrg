@@ -5,20 +5,11 @@ import Link from "next/link";
 import { listAllFurnitureTemplates, deleteFurnitureTemplate } from "@/modules/furniture-templates/services/furniture.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import type { FurnitureTemplate } from "@/types";
-
-const categoryLabels: Record<string, string> = {
-  Cozinha: "Cozinha",
-  Banheiro: "Banheiro",
-  Quarto: "Quarto",
-  Sala: "Sala",
-  Escritorio: "Escritório",
-  Outro: "Outro",
-};
 
 export default function FurnitureTemplatesPage() {
   const [templates, setTemplates] = useState<FurnitureTemplate[]>([]);

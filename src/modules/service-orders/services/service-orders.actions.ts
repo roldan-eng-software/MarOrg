@@ -1,17 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { ServiceOrder, ServiceOrderItem, Budget } from "@/types";
-
-async function generateOrderNumber(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
-  const { count } = await supabase
-    .from("service_orders")
-    .select("*", { count: "exact", head: true });
-
-  const num = (count || 0) + 1;
-  const year = new Date().getFullYear();
-  return `OS-${year}-${String(num).padStart(4, "0")}`;
-}
+import type { ServiceOrder, ServiceOrderItem } from "@/types";
 
 export async function listServiceOrders(status?: string) {
   const supabase = await createClient();

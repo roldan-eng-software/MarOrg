@@ -124,14 +124,6 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     revenue,
   }));
 
-  const customerTotals: Record<string, { name: string; total: number; count: number }> = {};
-  allRevenue
-    .filter((b) => b.status === "aprovado")
-    .forEach((b) => {
-      const budgetsAny = budgets as { customer_id?: string }[];
-      const match = budgetsAny.find((x) => x === b);
-    });
-  
   const topCustomersResult = await supabase
     .from("budgets")
     .select("total_amount, customer_id, customers(full_name)")

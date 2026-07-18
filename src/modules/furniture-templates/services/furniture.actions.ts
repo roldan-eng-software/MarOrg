@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import type { FurnitureTemplate } from "@/types";
 
 export async function listFurnitureTemplates(category?: string) {
