@@ -168,6 +168,13 @@ export default function ServiceOrderDetailPage() {
               Editar
             </Button>
           )}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => window.open(`/api/service-orders/${params.id}/pdf`, "_blank")}
+          >
+            Baixar PDF
+          </Button>
         </div>
       </div>
 
