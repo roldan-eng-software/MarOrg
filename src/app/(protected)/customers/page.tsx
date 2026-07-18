@@ -46,8 +46,8 @@ export default function CustomersListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#3D2519]">Clientes</h1>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+        <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Clientes</h1>
         <Link href="/customers/new">
           <Button>Novo Cliente</Button>
         </Link>
@@ -73,7 +73,7 @@ export default function CustomersListPage() {
               {customers.map((customer) => (
                 <div
                   key={customer.id}
-                  className="flex items-center justify-between py-3"
+                  className="flex flex-col sm:flex-row items-center justify-between py-3 gap-2"
                 >
                   <div>
                     <p className="font-medium text-[#3D2519]">

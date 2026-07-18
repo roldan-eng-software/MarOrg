@@ -83,8 +83,8 @@ export default function ServiceOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#3D2519]">Ordens de Serviço</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Ordens de Serviço</h1>
         <div className="flex gap-2">
           <Button
             variant={view === "kanban" ? "primary" : "ghost"}
@@ -104,7 +104,7 @@ export default function ServiceOrdersPage() {
       </div>
 
       {view === "kanban" ? (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {kanbanColumns.map((status) => {
             const config = statusConfig[status];
             const columnOrders = getOrdersByStatus(status);
@@ -191,7 +191,7 @@ export default function ServiceOrdersPage() {
                 onClick={() => router.push(`/service-orders/${order.id}`)}
               >
                 <Card className="hover:shadow-md transition-shadow">
-                  <CardContent className="flex items-center justify-between p-4">
+                  <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 gap-2 sm:gap-0">
                   <div className="flex items-center gap-4">
                     <div>
                       <p className="font-mono text-sm text-[#8B7A6B]">{order.order_number}</p>

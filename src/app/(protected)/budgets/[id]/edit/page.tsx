@@ -197,8 +197,8 @@ export default function BudgetEditPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#3D2519]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">
           Editar Orçamento
         </h1>
         <Badge variant={statusVariants[budgetStatus]}>
@@ -288,7 +288,7 @@ export default function BudgetEditPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
                     id={`items.${index}.item_type`}
                     label="Tipo *"
@@ -330,7 +330,7 @@ export default function BudgetEditPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <Input
                     id={`items.${index}.material`}
                     label="Material"
@@ -363,7 +363,7 @@ export default function BudgetEditPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <Input
                     id={`items.${index}.width_cm`}
                     label="Largura (cm)"
@@ -455,7 +455,7 @@ export default function BudgetEditPage() {
                 {installmentFields.map((field, index) => (
                   <div
                     key={field.id}
-                    className="flex items-end gap-3 rounded-md border border-[#D4C4B0] p-3"
+                    className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3 rounded-md border border-[#D4C4B0] p-3"
                   >
                     <div className="w-16">
                       <Input
@@ -545,7 +545,7 @@ export default function BudgetEditPage() {
         </div>
 
         {canEdit && (
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
             <Button
               type="button"
               variant="secondary"

@@ -147,14 +147,14 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#3D2519]">Estoque</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Estoque</h1>
         <Button onClick={() => setShowNewForm(!showNewForm)}>
           {showNewForm ? "Cancelar" : "+ Novo Material"}
         </Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-[#8B7A6B]">Materiais</p>
@@ -190,7 +190,7 @@ export default function InventoryPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreateMaterial} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input id="name" label="Nome *" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: MDF Branco" />
                 <div>
                   <label className="text-sm font-medium text-[#3D2519]">Categoria</label>
@@ -203,7 +203,7 @@ export default function InventoryPage() {
                 </div>
                 <Input id="unit" label="Unidade" value={newUnit} onChange={(e) => setNewUnit(e.target.value)} placeholder="un, m², kg..." />
               </div>
-              <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Input id="stock" label="Estoque Atual" type="number" step="0.001" value={newStock} onChange={(e) => setNewStock(Number(e.target.value))} />
                 <Input id="min" label="Estoque Mínimo" type="number" step="0.001" value={newMinStock} onChange={(e) => setNewMinStock(Number(e.target.value))} />
                 <Input id="cost" label="Custo Unitário" type="number" step="0.01" value={newCost} onChange={(e) => setNewCost(Number(e.target.value))} />
@@ -218,9 +218,9 @@ export default function InventoryPage() {
         </Card>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Input id="search" label="" placeholder="Buscar material..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {["", "madeira", "ferragem", "acabamento", "colante", "vidro", "fixacao", "geral"].map((cat) => (
             <Button key={cat} size="sm" variant={filterCategory === cat ? "primary" : "ghost"}
               onClick={() => setFilterCategory(cat)}>
@@ -240,7 +240,7 @@ export default function InventoryPage() {
             const isLow = mat.min_stock > 0 && mat.current_stock <= mat.min_stock;
             return (
               <Card key={mat.id} className={isLow ? "border-red-300 bg-red-50" : ""}>
-                <CardContent className="flex items-center justify-between p-4">
+                <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                   <div className="flex items-center gap-4">
                     <div>
                       <div className="flex items-center gap-2">

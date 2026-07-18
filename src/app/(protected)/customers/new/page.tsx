@@ -87,7 +87,7 @@ export default function CustomerNewPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-[#3D2519]">Novo Cliente</h1>
+      <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Novo Cliente</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card>
@@ -101,7 +101,7 @@ export default function CustomerNewPage() {
               {...register("full_name")}
               error={errors.full_name?.message}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 id="phone"
                 label="Telefone *"
@@ -168,7 +168,7 @@ export default function CustomerNewPage() {
                 ) : null
               }
             />
-            <div className="grid grid-cols-[1fr_auto] gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4">
               <Input
                 id="address_street"
                 label="Rua"
@@ -186,7 +186,7 @@ export default function CustomerNewPage() {
               label="Complemento"
               {...register("address_complement")}
             />
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Input
                 id="address_neighborhood"
                 label="Bairro"
@@ -220,7 +220,7 @@ export default function CustomerNewPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
           <Button
             type="button"
             variant="secondary"

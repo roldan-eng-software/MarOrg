@@ -147,12 +147,12 @@ export default function ServiceOrderDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-[#3D2519]">
+          <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">
             {order.order_number}
           </h1>
-          <p className="text-sm text-[#8B7A6B]">
+          <p className="text-sm text-[#8B7A6B] truncate">
             Orçamento: {order.budgets.budget_number} | Cliente: {order.customers.full_name}
           </p>
         </div>
@@ -183,7 +183,7 @@ export default function ServiceOrderDetailPage() {
           <CardTitle>Dados da Ordem</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-[#8B7A6B]">Responsável</label>
               {editing ? (
@@ -237,7 +237,7 @@ export default function ServiceOrderDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-[#8B7A6B]">Observações Internas</label>
               {editing ? (
@@ -274,19 +274,19 @@ export default function ServiceOrderDetailPage() {
         <CardContent>
           <div className="space-y-3">
             {order.items.map((item, i) => (
-              <div key={item.id} className="flex items-center justify-between rounded border border-[#D4C4B0] p-3">
-                <div className="flex items-center gap-4">
+              <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded border border-[#D4C4B0] p-3">
+                <div className="flex items-center gap-4 min-w-0">
                   <span className="text-xs text-[#8B7A6B]">{i + 1}</span>
                   <div>
                     <p className="text-sm font-medium text-[#3D2519]">{item.description}</p>
-                    <p className="text-xs text-[#8B7A6B]">
+                    <p className="text-xs text-[#8B7A6B] truncate">
                       {item.material && `Material: ${item.material}`}
                       {item.finish && ` | Acabamento: ${item.finish}`}
                       {item.width_cm && item.height_cm && item.depth_cm && ` | ${item.width_cm}×${item.depth_cm}×${item.height_cm}cm`}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right sm:text-right mt-2 sm:mt-0 shrink-0">
                   <p className="text-sm font-semibold text-[#3D2519]">{formatCurrency(item.total_price)}</p>
                   <p className="text-xs text-[#8B7A6B]">{item.quantity} {item.unit}</p>
                 </div>

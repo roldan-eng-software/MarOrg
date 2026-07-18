@@ -165,11 +165,11 @@ export default function SchedulePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#3D2519]">Agenda de Entregas</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Agenda de Entregas</h1>
         <Button variant="ghost" onClick={goToToday}>Hoje</Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-[#8B7A6B]">Entregas no Mês</p>
@@ -190,8 +190,8 @@ export default function SchedulePage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="lg:col-span-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <Button variant="ghost" size="sm" onClick={prevMonth}>← Anterior</Button>
@@ -209,7 +209,7 @@ export default function SchedulePage() {
                 ))}
                 {calendarDays.map((day, i) => {
                   if (day === null) {
-                    return <div key={`empty-${i}`} className="h-24" />;
+                    return <div key={`empty-${i}`} className="h-16 sm:h-20 md:h-24" />;
                   }
                   const dateKey = formatDateKey(currentYear, currentMonth, day);
                   const dayOrders = getOrdersForDate(dateKey);
@@ -221,7 +221,7 @@ export default function SchedulePage() {
                     <div
                       key={dateKey}
                       onClick={() => setSelectedDate(dateKey)}
-                      className={`h-24 rounded-lg border p-1.5 cursor-pointer transition-colors ${
+                      className={`h-16 sm:h-20 md:h-24 rounded-lg border p-1.5 cursor-pointer transition-colors ${
                         selected
                           ? "border-[#5B3A29] bg-[#F5F0EB]"
                           : today

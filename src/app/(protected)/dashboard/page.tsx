@@ -67,7 +67,7 @@ function MetricCard({
             <p className="text-xs font-medium text-[#8B7A6B] uppercase tracking-wide">
               {title}
             </p>
-            <p className="mt-1 text-2xl font-bold text-[#3D2519]">{value}</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-[#3D2519]">{value}</p>
             {subtitle && (
               <p className="mt-1 text-xs text-[#8B7A6B]">{subtitle}</p>
             )}
@@ -87,7 +87,7 @@ function BarChart({
   maxValue: number;
 }) {
   return (
-    <div className="flex items-end gap-2 h-40">
+    <div className="flex items-end gap-2 h-32 md:h-40">
       {data.map((item, i) => {
         const height = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
         return (
@@ -200,9 +200,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[#3D2519]">Dashboard</h1>
+      <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Dashboard</h1>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <MetricCard
           title="Clientes"
           value={metrics.totalCustomers.toString()}
@@ -227,7 +227,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Faturamento (6 meses)</CardTitle>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Card>
           <CardHeader>
             <CardTitle>OS por Status</CardTitle>
@@ -307,7 +307,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Orçamentos Recentes</CardTitle>
