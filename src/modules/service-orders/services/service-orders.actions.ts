@@ -130,6 +130,40 @@ export async function createServiceOrderFromBudget(budgetId: string) {
     }));
 
     await supabase.from("service_order_items").insert(items);
+
+    // Baixa automática de estoque
+    for (const item of budgetItems) {
+      if (!item.material || item.item_type !== "mobiliario") continue;
+
+      const { data: material } = await supabase
+        .from("materials")
+        .select("id, current_stock")
+        .ilike("name", item.material)
+        .eq("active", true)
+        .single();
+
+      if (!material) continue;
+
+      const quantity = Number(item.quantity);
+      if (quantity <= 0) continue;
+
+      const newStock = Number(material.current_stock) - quantity;
+
+      await supabase.from("stock_movements").insert({
+        material_id: material.id,
+        movement_type: "saida",
+        quantity,
+        reason: `Baixa automática - OS ${orderNumber}`,
+        reference_type: "service_order",
+        reference_id: order.id,
+        created_by: user.id,
+      });
+
+      await supabase
+        .from("materials")
+        .update({ current_stock: newStock })
+        .eq("id", material.id);
+    }
   }
 
   return order as ServiceOrder;
