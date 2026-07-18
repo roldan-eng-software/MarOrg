@@ -219,3 +219,39 @@ export interface StockMovement {
   created_by: string | null;
   created_at: string;
 }
+
+export interface Supplier {
+  id: string;
+  name: string;
+  cnpj: string | null;
+  phone: string | null;
+  email: string | null;
+  contact_person: string | null;
+  address_street: string | null;
+  address_number: string | null;
+  address_complement: string | null;
+  address_neighborhood: string | null;
+  address_city: string | null;
+  address_state: string | null;
+  address_zip: string | null;
+  notes: string | null;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Purchase {
+  id: string;
+  purchase_number: string;
+  supplier_id: string | null;
+  budget_id: string | null;
+  description: string;
+  total_amount: number;
+  status: "pendente" | "aprovada" | "entregue" | "cancelada";
+  due_date: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}

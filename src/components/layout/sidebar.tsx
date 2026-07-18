@@ -14,8 +14,11 @@ const navItems = [
   { href: "/service-orders", label: "Ordens de Serviço", icon: "🔧" },
   { href: "/schedule", label: "Agenda", icon: "📅" },
   { href: "/inventory", label: "Estoque", icon: "📦" },
+  { href: "/suppliers", label: "Fornecedores", icon: "🏭" },
+  { href: "/financial", label: "Fluxo de Caixa", icon: "💰" },
   { href: "/reports", label: "Relatórios", icon: "📈" },
   { href: "/furniture-templates", label: "Modelos de Móveis", icon: "🪑" },
+  { href: "/portal", label: "Portal do Cliente", icon: "🌐" },
   { href: "/settings", label: "Configurações", icon: "⚙️" },
 ];
 
