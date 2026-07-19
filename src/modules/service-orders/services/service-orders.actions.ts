@@ -137,7 +137,7 @@ export async function createServiceOrderFromBudget(budgetId: string) {
 
       const { data: material } = await supabase
         .from("materials")
-        .select("id, current_stock")
+        .select("id, name, current_stock, cost")
         .eq("id", item.material_id)
         .single();
 
@@ -148,6 +148,8 @@ export async function createServiceOrderFromBudget(budgetId: string) {
 
       const newStock = Number(material.current_stock) - quantity;
 
+      const serviceOrderItemId = insertedItemsMap.get(item.material_id) ?? null;
+
       await supabase.from("stock_movements").insert({
         material_id: material.id,
         movement_type: "reserva",
@@ -155,7 +157,7 @@ export async function createServiceOrderFromBudget(budgetId: string) {
         reason: `Reserva automática - OS ${orderNumber}`,
         reference_type: "service_order",
         reference_id: order.id,
-        service_order_item_id: insertedItemsMap.get(item.material_id) ?? null,
+        service_order_item_id: serviceOrderItemId,
         created_by: user.id,
       });
 
@@ -163,6 +165,34 @@ export async function createServiceOrderFromBudget(budgetId: string) {
         .from("materials")
         .update({ current_stock: newStock })
         .eq("id", material.id);
+
+      if (serviceOrderItemId) {
+        const { data: linkData } = await supabase
+          .from("service_order_item_materials")
+          .insert({
+            service_order_item_id: serviceOrderItemId,
+            material_id: material.id,
+            quantity,
+          })
+          .select("id")
+          .single();
+
+        const materialCost = Number(material.cost) * quantity;
+
+        await supabase.from("financial_transactions").insert({
+          transaction_type: "despesa",
+          category: "Material",
+          description: `Material: ${material.name} - ${orderNumber} - ${item.description}`,
+          amount: materialCost,
+          due_date: new Date().toISOString().split("T")[0],
+          status: "pendente",
+          entity_type: "service_order_item_material",
+          entity_id: linkData?.id ?? null,
+          service_order_id: order.id,
+          notes: `Custo de material automático - OS ${orderNumber}. Qtd: ${quantity} × R$ ${material.cost}`,
+          created_by: user.id,
+        });
+      }
     }
   }
 
@@ -231,7 +261,7 @@ export async function linkMaterialToOrderItem(
 
   const { data: material } = await supabase
     .from("materials")
-    .select("id, name, current_stock, unit")
+    .select("id, name, current_stock, unit, cost")
     .eq("id", materialId)
     .single();
 
@@ -252,13 +282,15 @@ export async function linkMaterialToOrderItem(
     throw new Error("Este material já está vinculado a este item");
   }
 
-  const { error: insertError } = await supabase
+  const { data: linkData, error: insertError } = await supabase
     .from("service_order_item_materials")
     .insert({
       service_order_item_id: itemId,
       material_id: materialId,
       quantity,
-    });
+    })
+    .select("id")
+    .single();
 
   if (insertError) throw new Error("Erro ao vincular material");
 
@@ -280,6 +312,23 @@ export async function linkMaterialToOrderItem(
     .from("materials")
     .update({ current_stock: newStock })
     .eq("id", materialId);
+
+  const materialCost = Number(material.cost) * quantity;
+
+  await supabase.from("financial_transactions").insert({
+    transaction_type: "despesa",
+    category: "Material",
+    description: `Material: ${material.name} - ${orderNumber} - ${item.description}`,
+    amount: materialCost,
+    due_date: new Date().toISOString().split("T")[0],
+    status: "pendente",
+    entity_type: "service_order_item_material",
+    entity_id: linkData.id,
+    service_order_id: item.service_order_id,
+    budget_id: null,
+    notes: `Custo de material vinculado à OS ${orderNumber}. Qtd: ${quantity} ${material.unit} × R$ ${material.cost}`,
+    created_by: user.id,
+  });
 
   return { success: true };
 }
@@ -332,6 +381,12 @@ export async function unlinkMaterialFromOrderItem(linkId: string) {
     .eq("id", linkId);
 
   if (deleteError) throw new Error("Erro ao remover vínculo");
+
+  await supabase
+    .from("financial_transactions")
+    .delete()
+    .eq("entity_type", "service_order_item_material")
+    .eq("entity_id", linkId);
 
   return { success: true };
 }
