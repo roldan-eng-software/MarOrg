@@ -19,11 +19,7 @@ export async function listBudgetImages(budgetId: string) {
   return data as BudgetImage[];
 }
 
-export async function uploadBudgetImage(
-  budgetId: string,
-  file: File,
-  description?: string
-) {
+export async function uploadBudgetImage(formData: FormData) {
   const supabase = await createClient();
 
   const {
@@ -32,6 +28,14 @@ export async function uploadBudgetImage(
 
   if (!user) {
     throw new Error("Usuário não autenticado");
+  }
+
+  const file = formData.get("file") as File;
+  const budgetId = formData.get("budgetId") as string;
+  const description = formData.get("description") as string | null;
+
+  if (!file || !budgetId) {
+    throw new Error("Dados incompletos para upload");
   }
 
   const fileExt = file.name.split(".").pop();

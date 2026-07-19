@@ -53,7 +53,11 @@ export default function BudgetSendPage() {
 
     try {
       setUploadingImage(true);
-      const newImage = await uploadBudgetImage(budgetId, file, imageDescription || undefined);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("budgetId", budgetId);
+      if (imageDescription) formData.append("description", imageDescription);
+      const newImage = await uploadBudgetImage(formData);
       setImages((prev) => [...prev, newImage]);
       setImageDescription("");
       showToast("Imagem enviada com sucesso", "success");
