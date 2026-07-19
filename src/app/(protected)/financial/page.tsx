@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,12 +61,25 @@ export default function FinancialPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [typeFilter, setTypeFilter] = useState<"receita" | "despesa" | "">("");
+  const lastFetchRef = useRef(0);
 
   useEffect(() => {
     loadData();
+
+    function handleVisibility() {
+      if (document.visibilityState === "visible") {
+        loadData();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   async function loadData() {
+    const now = Date.now();
+    if (now - lastFetchRef.current < 1000) return;
+    lastFetchRef.current = now;
+
     try {
       setLoading(true);
       const [summaryData, transactionsData, suppliersData] = await Promise.all([
