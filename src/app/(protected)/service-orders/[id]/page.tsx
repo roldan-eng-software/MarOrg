@@ -196,6 +196,15 @@ export default function ServiceOrderDetailPage() {
           >
             Baixar PDF
           </Button>
+          {(order.status === "pendente" || order.status === "em_producao") && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => router.push(`/service-orders/${params.id}/production`)}
+            >
+              Produção
+            </Button>
+          )}
         </div>
       </div>
 

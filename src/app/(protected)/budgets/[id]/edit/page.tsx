@@ -23,8 +23,9 @@ import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { FurnitureSelect } from "@/components/furniture-select";
+import { MaterialPicker } from "@/components/material-picker";
 import { createServiceOrderFromBudget } from "@/modules/service-orders/services/service-orders.actions";
-import type { Customer, BudgetItem, FurnitureTemplate } from "@/types";
+import type { Customer, BudgetItem, FurnitureTemplate, Material } from "@/types";
 
 const statusLabels: Record<string, string> = {
   rascunho: "Rascunho",
@@ -54,6 +55,7 @@ export default function BudgetEditPage() {
   const [generatingOS, setGeneratingOS] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [budgetStatus, setBudgetStatus] = useState<string>("");
+  const [materialSelections, setMaterialSelections] = useState<Record<number, string | null>>({});
 
   const {
     register,
@@ -98,6 +100,7 @@ export default function BudgetEditPage() {
           item_type: item.item_type,
           description: item.description,
           material: item.material ?? "",
+          material_id: item.material_id ?? null,
           width_cm: item.width_cm ?? undefined,
           depth_cm: item.depth_cm ?? undefined,
           height_cm: item.height_cm ?? undefined,
@@ -110,6 +113,11 @@ export default function BudgetEditPage() {
           sort_order: item.sort_order,
         })),
       });
+      const matSelections: Record<number, string | null> = {};
+      budget.items.forEach((item: BudgetItem, i: number) => {
+        matSelections[i] = item.material_id ?? null;
+      });
+      setMaterialSelections(matSelections);
     }).catch(() => {
       showToast("Erro ao carregar orçamento", "error");
     }).finally(() => setFetching(false));
@@ -180,6 +188,7 @@ export default function BudgetEditPage() {
           item_type: item.item_type,
           description: item.description,
           material: item.material || null,
+          material_id: materialSelections[i] ?? null,
           width_cm: item.width_cm || null,
           depth_cm: item.depth_cm || null,
           height_cm: item.height_cm || null,
@@ -367,10 +376,18 @@ export default function BudgetEditPage() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <Input
-                    id={`items.${index}.material`}
-                    label="Material"
-                    {...register(`items.${index}.material`)}
+                  <MaterialPicker
+                    value={items?.[index]?.material || ""}
+                    materialId={materialSelections[index] ?? null}
+                    onChange={(val) => setValue(`items.${index}.material`, val)}
+                    onMaterialSelect={(mat) => {
+                      setMaterialSelections((prev) => ({ ...prev, [index]: mat.id }));
+                      if (mat.cost > 0) setValue(`items.${index}.unit_price`, Number(mat.cost));
+                      if (mat.unit) setValue(`items.${index}.unit`, mat.unit);
+                    }}
+                    onClear={() => {
+                      setMaterialSelections((prev) => ({ ...prev, [index]: null }));
+                    }}
                     disabled={!canEdit}
                   />
                   <Input

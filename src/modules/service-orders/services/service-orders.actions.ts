@@ -111,6 +111,7 @@ export async function createServiceOrderFromBudget(budgetId: string) {
       item_type: item.item_type,
       description: item.description,
       material: item.material,
+      material_id: item.material_id ?? null,
       width_cm: item.width_cm,
       depth_cm: item.depth_cm,
       height_cm: item.height_cm,
@@ -123,17 +124,21 @@ export async function createServiceOrderFromBudget(budgetId: string) {
       sort_order: i,
     }));
 
-    await supabase.from("service_order_items").insert(items);
+    const { data: insertedItems } = await supabase
+      .from("service_order_items")
+      .insert(items)
+      .select("id, material_id");
 
     // Baixa automática de estoque
+    const insertedItemsMap = new Map(insertedItems?.map((it) => [it.material_id, it.id]));
+
     for (const item of budgetItems) {
-      if (!item.material || item.item_type !== "mobiliario") continue;
+      if (!item.material_id || item.item_type !== "mobiliario") continue;
 
       const { data: material } = await supabase
         .from("materials")
         .select("id, current_stock")
-        .ilike("name", item.material)
-        .eq("active", true)
+        .eq("id", item.material_id)
         .single();
 
       if (!material) continue;
@@ -145,11 +150,12 @@ export async function createServiceOrderFromBudget(budgetId: string) {
 
       await supabase.from("stock_movements").insert({
         material_id: material.id,
-        movement_type: "saida",
+        movement_type: "reserva",
         quantity,
-        reason: `Baixa automática - OS ${orderNumber}`,
+        reason: `Reserva automática - OS ${orderNumber}`,
         reference_type: "service_order",
         reference_id: order.id,
+        service_order_item_id: insertedItemsMap.get(item.material_id) ?? null,
         created_by: user.id,
       });
 

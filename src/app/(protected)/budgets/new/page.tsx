@@ -18,12 +18,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { FurnitureSelect } from "@/components/furniture-select";
+import { MaterialPicker } from "@/components/material-picker";
 import type { Customer, FurnitureTemplate } from "@/types";
 
 export default function BudgetNewPage() {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [materialSelections, setMaterialSelections] = useState<Record<number, string | null>>({});
 
   const {
     register,
@@ -135,6 +137,7 @@ export default function BudgetNewPage() {
           item_type: item.item_type,
           description: item.description,
           material: item.material || null,
+          material_id: materialSelections[i] ?? null,
           width_cm: item.width_cm || null,
           depth_cm: item.depth_cm || null,
           height_cm: item.height_cm || null,
@@ -278,10 +281,18 @@ export default function BudgetNewPage() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <Input
-                    id={`items.${index}.material`}
-                    label="Material"
-                    {...register(`items.${index}.material`)}
+                  <MaterialPicker
+                    value={items?.[index]?.material || ""}
+                    materialId={materialSelections[index] ?? null}
+                    onChange={(val) => setValue(`items.${index}.material`, val)}
+                    onMaterialSelect={(mat) => {
+                      setMaterialSelections((prev) => ({ ...prev, [index]: mat.id }));
+                      if (mat.cost > 0) setValue(`items.${index}.unit_price`, Number(mat.cost));
+                      if (mat.unit) setValue(`items.${index}.unit`, mat.unit);
+                    }}
+                    onClear={() => {
+                      setMaterialSelections((prev) => ({ ...prev, [index]: null }));
+                    }}
                   />
                   <Input
                     id={`items.${index}.unit`}

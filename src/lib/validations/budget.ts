@@ -7,6 +7,7 @@ export const budgetItemSchema = z.object({
   }),
   description: z.string().min(3, "Descrição deve ter pelo menos 3 caracteres"),
   material: z.string().optional().or(z.literal("")),
+  material_id: z.string().uuid().optional().nullable(),
   width_cm: z.coerce.number().positive("Largura deve ser positiva").optional(),
   depth_cm: z.coerce.number().positive("Profundidade deve ser positiva").optional(),
   height_cm: z.coerce.number().positive("Altura deve ser positiva").optional(),

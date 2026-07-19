@@ -72,6 +72,7 @@ export interface BudgetItem {
   item_type: "mobiliario" | "servico";
   description: string;
   material: string | null;
+  material_id: string | null;
   width_cm: number | null;
   depth_cm: number | null;
   height_cm: number | null;
@@ -192,6 +193,7 @@ export interface ServiceOrderItem {
   item_type: "mobiliario" | "servico";
   description: string;
   material: string | null;
+  material_id: string | null;
   width_cm: number | null;
   depth_cm: number | null;
   height_cm: number | null;
@@ -229,6 +231,7 @@ export interface StockMovement {
   reason: string | null;
   reference_type: string | null;
   reference_id: string | null;
+  service_order_item_id: string | null;
   created_by: string | null;
   created_at: string;
 }
