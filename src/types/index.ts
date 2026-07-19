@@ -3,6 +3,13 @@ export interface Profile {
   full_name: string;
   role: "admin" | "comercial" | "financeiro" | "producao";
   active: boolean;
+  settings: {
+    company_name?: string;
+    company_phone?: string;
+    company_address?: string;
+    company_cnpj?: string;
+    company_email?: string;
+  };
   created_at: string;
   updated_at: string;
 }

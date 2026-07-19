@@ -14,6 +14,7 @@ import type {
   CustomerReport,
 } from "@/modules/reports/services/reports.actions";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
+import type { CompanySettings } from "./company-settings";
 
 const COLORS = {
   primary: "#5B3A29",
@@ -173,24 +174,26 @@ const styles = StyleSheet.create({
   },
 });
 
-const COMPANY = {
-  name: "Roldan Marcenaria",
-  tagline: "Móveis Planejados sob Medida",
-  phone: "(11) 99999-9999",
-  address: "Rua da Marcenaria, 123 - Centro - São Paulo/SP",
-  cnpj: "00.000.000/0001-00",
+const COMPANY_DEFAULTS: CompanySettings = {
+  company_name: "Roldan Marcenaria",
+  company_phone: "",
+  company_address: "",
+  company_cnpj: "",
+  company_email: "",
 };
 
-function Header({ title, period }: { title: string; period: string }) {
+function Header({ title, period, company }: { title: string; period: string; company: CompanySettings }) {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Text style={styles.companyName}>{COMPANY.name}</Text>
-        <Text style={styles.companyTagline}>{COMPANY.tagline}</Text>
+        <Text style={styles.companyName}>{company.company_name}</Text>
+        <Text style={styles.companyTagline}>Móveis Planejados sob Medida</Text>
         <Text style={styles.companyInfo}>
-          Tel: {COMPANY.phone}{"\n"}
-          {COMPANY.address}{"\n"}
-          CNPJ: {COMPANY.cnpj}
+          {[
+            company.company_phone && `Tel: ${company.company_phone}`,
+            company.company_address,
+            company.company_cnpj && `CNPJ: ${company.company_cnpj}`,
+          ].filter(Boolean).join("\n")}
         </Text>
       </View>
       <View style={styles.headerRight}>
@@ -253,11 +256,11 @@ function TableRow({
   );
 }
 
-function RevenuePDF({ data }: { data: RevenueReport }) {
+function RevenuePDF({ data, company }: { data: RevenueReport; company: CompanySettings }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Header title="Relatório de Faturamento" period={data.period} />
+        <Header title="Relatório de Faturamento" period={data.period} company={company} />
 
         <View style={styles.statRow}>
           <StatBox label="Faturamento Total" value={formatCurrency(data.totalRevenue)} />
@@ -289,18 +292,18 @@ function RevenuePDF({ data }: { data: RevenueReport }) {
         </View>
 
         <View style={styles.footer}>
-          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {COMPANY.name}</Text>
+          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {company.company_name}</Text>
         </View>
       </Page>
     </Document>
   );
 }
 
-function BudgetPDF({ data }: { data: BudgetReport }) {
+function BudgetPDF({ data, company }: { data: BudgetReport; company: CompanySettings }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Header title="Relatório de Orçamentos" period="Todos os períodos" />
+        <Header title="Relatório de Orçamentos" period="Todos os períodos" company={company} />
 
         <View style={styles.statRow}>
           <StatBox label="Total de Orçamentos" value={String(data.total)} />
@@ -343,18 +346,18 @@ function BudgetPDF({ data }: { data: BudgetReport }) {
         </View>
 
         <View style={styles.footer}>
-          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {COMPANY.name}</Text>
+          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {company.company_name}</Text>
         </View>
       </Page>
     </Document>
   );
 }
 
-function ServiceOrderPDF({ data }: { data: ServiceOrderReport }) {
+function ServiceOrderPDF({ data, company }: { data: ServiceOrderReport; company: CompanySettings }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Header title="Relatório de Ordens de Serviço" period="Todos os períodos" />
+        <Header title="Relatório de Ordens de Serviço" period="Todos os períodos" company={company} />
 
         <View style={styles.statRow}>
           <StatBox label="Total de OS" value={String(data.total)} />
@@ -399,18 +402,18 @@ function ServiceOrderPDF({ data }: { data: ServiceOrderReport }) {
         </View>
 
         <View style={styles.footer}>
-          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {COMPANY.name}</Text>
+          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {company.company_name}</Text>
         </View>
       </Page>
     </Document>
   );
 }
 
-function InventoryPDF({ data }: { data: InventoryReport }) {
+function InventoryPDF({ data, company }: { data: InventoryReport; company: CompanySettings }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Header title="Relatório de Estoque" period="Todos os períodos" />
+        <Header title="Relatório de Estoque" period="Todos os períodos" company={company} />
 
         <View style={styles.statRow}>
           <StatBox label="Materiais" value={String(data.totalMaterials)} />
@@ -475,18 +478,18 @@ function InventoryPDF({ data }: { data: InventoryReport }) {
         )}
 
         <View style={styles.footer}>
-          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {COMPANY.name}</Text>
+          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {company.company_name}</Text>
         </View>
       </Page>
     </Document>
   );
 }
 
-function CustomerPDF({ data }: { data: CustomerReport }) {
+function CustomerPDF({ data, company }: { data: CustomerReport; company: CompanySettings }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Header title="Relatório de Clientes" period="Todos os períodos" />
+        <Header title="Relatório de Clientes" period="Todos os períodos" company={company} />
 
         <View style={styles.statRow}>
           <StatBox label="Total de Clientes" value={String(data.totalCustomers)} />
@@ -523,7 +526,7 @@ function CustomerPDF({ data }: { data: CustomerReport }) {
         </View>
 
         <View style={styles.footer}>
-          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {COMPANY.name}</Text>
+          <Text>Gerado em {new Date().toLocaleDateString("pt-BR")} - {company.company_name}</Text>
         </View>
       </Page>
     </Document>
@@ -532,25 +535,26 @@ function CustomerPDF({ data }: { data: CustomerReport }) {
 
 export async function generateReportPDF(
   type: "revenue" | "budgets" | "orders" | "inventory" | "customers",
-  data: RevenueReport | BudgetReport | ServiceOrderReport | InventoryReport | CustomerReport
+  data: RevenueReport | BudgetReport | ServiceOrderReport | InventoryReport | CustomerReport,
+  companySettings: CompanySettings
 ): Promise<Buffer> {
   let doc;
 
   switch (type) {
     case "revenue":
-      doc = <RevenuePDF data={data as RevenueReport} />;
+      doc = <RevenuePDF data={data as RevenueReport} company={companySettings} />;
       break;
     case "budgets":
-      doc = <BudgetPDF data={data as BudgetReport} />;
+      doc = <BudgetPDF data={data as BudgetReport} company={companySettings} />;
       break;
     case "orders":
-      doc = <ServiceOrderPDF data={data as ServiceOrderReport} />;
+      doc = <ServiceOrderPDF data={data as ServiceOrderReport} company={companySettings} />;
       break;
     case "inventory":
-      doc = <InventoryPDF data={data as InventoryReport} />;
+      doc = <InventoryPDF data={data as InventoryReport} company={companySettings} />;
       break;
     case "customers":
-      doc = <CustomerPDF data={data as CustomerReport} />;
+      doc = <CustomerPDF data={data as CustomerReport} company={companySettings} />;
       break;
   }
 

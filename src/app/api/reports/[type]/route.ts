@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateReportPDF } from "@/modules/documents/services/report-pdf.service";
+import { getCompanySettings } from "@/modules/documents/services/company-settings";
 import {
   getRevenueReport,
   getBudgetReport,
@@ -42,6 +43,7 @@ export async function GET(
   }
 
   try {
+    const companySettings = await getCompanySettings();
     let data;
 
     switch (type) {
@@ -64,7 +66,7 @@ export async function GET(
         return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
     }
 
-    const buffer = await generateReportPDF(type as "revenue" | "budgets" | "orders" | "inventory" | "customers", data);
+    const buffer = await generateReportPDF(type as "revenue" | "budgets" | "orders" | "inventory" | "customers", data, companySettings);
 
     const fileName = `relatorio-${REPORT_NAMES[type]}-${new Date().toISOString().slice(0, 10)}.pdf`;
 

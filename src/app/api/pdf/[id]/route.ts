@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateBudgetPDF } from "@/modules/documents/services/pdf.service";
+import { getCompanySettings } from "@/modules/documents/services/company-settings";
 import { getBudget } from "@/modules/budgets/services/budgets.actions";
 
 export async function GET(
@@ -20,6 +21,7 @@ export async function GET(
 
   try {
     const budget = await getBudget(id);
+    const companySettings = await getCompanySettings();
 
     const { data: images } = await supabase
       .from("budget_images")
@@ -32,6 +34,7 @@ export async function GET(
       items: budget.items,
       customer: budget.customers,
       images: images || [],
+      companySettings,
     });
 
     return new NextResponse(new Uint8Array(buffer), {

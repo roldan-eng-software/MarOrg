@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateServiceOrderPDF } from "@/modules/documents/services/os-pdf.service";
+import { getCompanySettings } from "@/modules/documents/services/company-settings";
 import { getServiceOrder } from "@/modules/service-orders/services/service-orders.actions";
 
 export async function GET(
@@ -20,12 +21,14 @@ export async function GET(
 
   try {
     const order = await getServiceOrder(id);
+    const companySettings = await getCompanySettings();
 
     const buffer = await generateServiceOrderPDF({
       order,
       items: order.items,
       customer: order.customers,
       budgetNotes: order.budgets?.notes_client,
+      companySettings,
     });
 
     return new NextResponse(new Uint8Array(buffer), {

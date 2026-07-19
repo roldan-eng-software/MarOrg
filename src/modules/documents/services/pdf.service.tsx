@@ -14,6 +14,7 @@ import type {
   PaymentInstallment,
   BudgetImage,
 } from "@/types";
+import type { CompanySettings } from "./company-settings";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 
 const COLORS = {
@@ -375,6 +376,7 @@ interface BudgetPDFData {
   items: BudgetItem[];
   customer: Customer;
   images?: BudgetImage[];
+  companySettings: CompanySettings;
 }
 
 function renderPaymentInstallments(
@@ -463,6 +465,7 @@ export function BudgetPDF({
   items,
   customer,
   images,
+  companySettings,
 }: BudgetPDFData) {
   const subtotal = items.reduce((sum, item) => sum + Number(item.total_price), 0);
   const installments = budget.payment_installments || [];
@@ -480,10 +483,14 @@ export function BudgetPDF({
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.companyName}>Roldan Marcenaria</Text>
+            <Text style={styles.companyName}>{companySettings.company_name}</Text>
             <Text style={styles.companyTagline}>Móveis Sob Medida</Text>
             <Text style={styles.companyInfo}>
-              {"Tel: (XX) XXXXX-XXXX\nRua Exemplo, 123 - Bairro Centro - Cidade/UF\nCEP: 00000-000 | CNPJ: 00.000.000/0001-00"}
+              {[
+                companySettings.company_phone && `Tel: ${companySettings.company_phone}`,
+                companySettings.company_address,
+                companySettings.company_cnpj && `CNPJ: ${companySettings.company_cnpj}`,
+              ].filter(Boolean).join("\n")}
             </Text>
           </View>
           <View style={styles.headerRight}>
@@ -709,7 +716,7 @@ export function BudgetPDF({
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
             <Text style={styles.signatureLabel}>Carimbo e Assinatura</Text>
-            <Text style={styles.signatureCompanyName}>Roldan Marcenaria</Text>
+            <Text style={styles.signatureCompanyName}>{companySettings.company_name}</Text>
           </View>
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />

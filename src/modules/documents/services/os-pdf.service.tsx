@@ -7,6 +7,7 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import type { ServiceOrder, ServiceOrderItem, Customer } from "@/types";
+import type { CompanySettings } from "./company-settings";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 
 const COLORS = {
@@ -271,9 +272,10 @@ interface OSPDFData {
   items: ServiceOrderItem[];
   customer: Customer;
   budgetNotes?: string | null;
+  companySettings: CompanySettings;
 }
 
-export function ServiceOrderPDF({ order, items, customer, budgetNotes }: OSPDFData) {
+export function ServiceOrderPDF({ order, items, customer, budgetNotes, companySettings }: OSPDFData) {
   const statusColor = statusColors[order.status] || COLORS.primary;
   const isUrgent = order.priority === "urgente";
 
@@ -283,7 +285,7 @@ export function ServiceOrderPDF({ order, items, customer, budgetNotes }: OSPDFDa
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.companyName}>Roldan Marcenaria</Text>
+            <Text style={styles.companyName}>{companySettings.company_name}</Text>
             <Text style={styles.companySub}>Móveis Sob Medida</Text>
           </View>
           <View style={styles.headerRight}>
@@ -492,7 +494,7 @@ export function ServiceOrderPDF({ order, items, customer, budgetNotes }: OSPDFDa
         {/* FOOTER */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {order.order_number} | Roldan Marcenaria
+            {order.order_number} | {companySettings.company_name}
           </Text>
           <Text style={styles.footerText}>
             Emitido em: {formatDate(new Date().toISOString())}
