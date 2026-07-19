@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showToast } from "@/components/ui/toast";
-import { uploadBudgetImage, deleteBudgetImage } from "@/modules/images/services/images.actions";
+import { deleteBudgetImage } from "@/modules/images/services/images.actions";
 import type { BudgetImage } from "@/types";
 
 export default function BudgetSendPage() {
@@ -53,12 +53,33 @@ export default function BudgetSendPage() {
 
     try {
       setUploadingImage(true);
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("budgetId", budgetId);
-      if (imageDescription) formData.append("description", imageDescription);
-      const newImage = await uploadBudgetImage(formData);
-      setImages((prev) => [...prev, newImage]);
+
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${budgetId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file, { contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("documents")
+        .getPublicUrl(filePath);
+
+      const { data, error: insertError } = await supabase
+        .from("budget_images")
+        .insert({
+          budget_id: budgetId,
+          image_url: urlData.publicUrl,
+          description: imageDescription || null,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      setImages((prev) => [...prev, data]);
       setImageDescription("");
       showToast("Imagem enviada com sucesso", "success");
     } catch {
