@@ -55,6 +55,8 @@ export interface Budget {
   payment_conditions: string | null;
   payment_installments: PaymentInstallment[];
   payment_types: string[];
+  deposit_percentage: number | null;
+  installment_count: number | null;
 }
 
 export interface BudgetItem {
@@ -167,6 +169,10 @@ export interface ServiceOrder {
   notes_internal: string | null;
   notes_production: string | null;
   total_amount: number;
+  deposit_percentage: number | null;
+  installment_count: number | null;
+  deposit_value: number;
+  installment_value: number;
   created_by: string;
   created_at: string;
   updated_at: string;

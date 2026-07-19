@@ -13,6 +13,8 @@ import {
   getServiceOrder,
   updateServiceOrder,
   updateServiceOrderStatus,
+  hasFinancialTransactions,
+  createFinancialTransactionsFromOS,
 } from "@/modules/service-orders/services/service-orders.actions";
 import type { ServiceOrder, ServiceOrderItem, Customer } from "@/types";
 
@@ -68,6 +70,8 @@ export default function ServiceOrderDetailPage() {
   const [priority, setPriority] = useState<string>("normal");
   const [notesInternal, setNotesInternal] = useState("");
   const [notesProduction, setNotesProduction] = useState("");
+  const [hasTransactions, setHasTransactions] = useState(false);
+  const [generatingFinance, setGeneratingFinance] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -83,6 +87,8 @@ export default function ServiceOrderDetailPage() {
       setPriority(data.priority);
       setNotesInternal(data.notes_internal ?? "");
       setNotesProduction(data.notes_production ?? "");
+      const transactionsExist = await hasFinancialTransactions(params.id as string);
+      setHasTransactions(transactionsExist);
     } catch {
       showToast("Erro ao carregar ordem de serviço", "error");
     } finally {
@@ -123,6 +129,21 @@ export default function ServiceOrderDetailPage() {
       showToast("Erro ao alterar status", "error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleGenerateFinance() {
+    if (!order) return;
+    try {
+      setGeneratingFinance(true);
+      const result = await createFinancialTransactionsFromOS(order.id);
+      showToast(`${result.count} transações financeiras criadas com sucesso`, "success");
+      setHasTransactions(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao gerar transações financeiras";
+      showToast(message, "error");
+    } finally {
+      setGeneratingFinance(false);
     }
   }
 
@@ -266,6 +287,55 @@ export default function ServiceOrderDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {((order.deposit_percentage ?? 0) > 0 || (order.installment_count ?? 1) > 1) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Condições de Pagamento</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div>
+                <label className="text-xs text-[#8B7A6B]">Valor Total</label>
+                <p className="font-bold text-[#3D2519]">{formatCurrency(order.total_amount)}</p>
+              </div>
+              {(order.deposit_percentage ?? 0) > 0 && (
+                <div>
+                  <label className="text-xs text-[#8B7A6B]">Sinal ({order.deposit_percentage}%)</label>
+                  <p className="font-semibold text-[#3D2519]">{formatCurrency(order.deposit_value)}</p>
+                </div>
+              )}
+              {(order.installment_count ?? 1) > 1 && (
+                <div>
+                  <label className="text-xs text-[#8B7A6B]">Parcelas</label>
+                  <p className="font-semibold text-[#3D2519]">{order.installment_count}x de {formatCurrency(order.installment_value)}</p>
+                </div>
+              )}
+              {(order.deposit_percentage ?? 0) > 0 && (order.installment_count ?? 1) > 1 && (
+                <div>
+                  <label className="text-xs text-[#8B7A6B]">Restante</label>
+                  <p className="font-semibold text-[#3D2519]">{formatCurrency(order.total_amount - order.deposit_value)}</p>
+                </div>
+              )}
+            </div>
+            {!hasTransactions && order.status !== "cancelada" && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleGenerateFinance}
+                disabled={generatingFinance}
+              >
+                {generatingFinance ? "Gerando..." : "Gerar Receitas Financeiras"}
+              </Button>
+            )}
+            {hasTransactions && (
+              <p className="text-sm text-green-700 bg-green-50 rounded px-3 py-2">
+                Transações financeiras já geradas.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

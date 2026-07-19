@@ -349,6 +349,37 @@ export function ServiceOrderPDF({ order, items, customer, budgetNotes }: OSPDFDa
           </View>
         </View>
 
+        {/* PAYMENT INFO */}
+        {((order.deposit_percentage ?? 0) > 0 || (order.installment_count ?? 1) > 1) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Condições de Pagamento</Text>
+            <View style={styles.infoGrid}>
+              <View style={styles.infoField}>
+                <Text style={styles.infoLabel}>Valor Total</Text>
+                <Text style={styles.infoValueBold}>{formatCurrency(order.total_amount)}</Text>
+              </View>
+              {(order.deposit_percentage ?? 0) > 0 && (
+                <View style={styles.infoField}>
+                  <Text style={styles.infoLabel}>Sinal ({order.deposit_percentage}%)</Text>
+                  <Text style={styles.infoValueBold}>{formatCurrency(order.deposit_value)}</Text>
+                </View>
+              )}
+              {(order.installment_count ?? 1) > 1 && (
+                <View style={styles.infoField}>
+                  <Text style={styles.infoLabel}>Parcelas</Text>
+                  <Text style={styles.infoValueBold}>{order.installment_count}x de {formatCurrency(order.installment_value)}</Text>
+                </View>
+              )}
+              {(order.deposit_percentage ?? 0) > 0 && (order.installment_count ?? 1) > 1 && (
+                <View style={styles.infoField}>
+                  <Text style={styles.infoLabel}>Restante</Text>
+                  <Text style={styles.infoValueBold}>{formatCurrency(order.total_amount - order.deposit_value)}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* ITEMS TABLE */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Itens / Materiais</Text>

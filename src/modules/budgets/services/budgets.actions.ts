@@ -87,6 +87,8 @@ export async function createBudget(
     payment_conditions?: string | null;
     payment_installments?: Budget["payment_installments"];
     payment_types?: string[];
+    deposit_percentage?: number;
+    installment_count?: number;
   },
   items: Omit<BudgetItem, "id" | "created_at" | "budget_id">[]
 ) {
@@ -109,6 +111,8 @@ export async function createBudget(
       payment_conditions: budget.payment_conditions ?? null,
       payment_installments: budget.payment_installments ?? [],
       payment_types: budget.payment_types ?? [],
+      deposit_percentage: budget.deposit_percentage ?? 0,
+      installment_count: budget.installment_count ?? 1,
       budget_number,
       version: 1,
       created_by: user.id,
@@ -144,6 +148,8 @@ export async function updateBudget(
     payment_conditions?: string | null;
     payment_installments?: Budget["payment_installments"];
     payment_types?: string[];
+    deposit_percentage?: number;
+    installment_count?: number;
   },
   items?: (Omit<BudgetItem, "id" | "created_at" | "budget_id"> & { id?: string })[]
 ) {

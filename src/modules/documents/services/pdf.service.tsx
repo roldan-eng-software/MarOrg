@@ -467,6 +467,12 @@ export function BudgetPDF({
   const subtotal = items.reduce((sum, item) => sum + Number(item.total_price), 0);
   const installments = budget.payment_installments || [];
   const paymentTypes = budget.payment_types || [];
+  const depositPct = Number(budget.deposit_percentage ?? 0);
+  const instCount = budget.installment_count ?? 1;
+  const totalAmount = Number(budget.total_amount);
+  const depositVal = totalAmount * (depositPct / 100);
+  const remaining = totalAmount - depositVal;
+  const perInstallment = instCount > 0 ? remaining / instCount : remaining;
 
   return (
     <Document>
@@ -647,7 +653,7 @@ export function BudgetPDF({
         </View>
 
         {/* PAYMENT CONDITIONS */}
-        {(paymentTypes.length > 0 || installments.length > 0) && (
+        {(paymentTypes.length > 0 || installments.length > 0 || depositPct > 0 || instCount > 1) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Condições de Pagamento</Text>
             {paymentTypes.length > 0 && (
@@ -659,7 +665,26 @@ export function BudgetPDF({
                 ))}
               </View>
             )}
-            {renderPaymentInstallments(installments, budget.total_amount)}
+            {depositPct > 0 && (
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 10, color: COLORS.text }}>
+                  Sinal de Entrada ({depositPct}%): {formatCurrency(depositVal)}
+                </Text>
+                {instCount > 1 ? (
+                  <Text style={{ fontSize: 10, color: COLORS.text }}>
+                    Restante: {instCount}x de {formatCurrency(perInstallment)} = {formatCurrency(remaining)}
+                  </Text>
+                ) : (
+                  <Text style={{ fontSize: 10, color: COLORS.text }}>
+                    Restante: {formatCurrency(remaining)} (pagamento único)
+                  </Text>
+                )}
+                <Text style={{ fontSize: 11, fontWeight: "bold", color: COLORS.primaryDark, marginTop: 4 }}>
+                  Total: {formatCurrency(totalAmount)}
+                </Text>
+              </View>
+            )}
+            {renderPaymentInstallments(installments, totalAmount)}
             {budget.payment_conditions && (
               <Text style={styles.paymentConditions}>
                 {budget.payment_conditions}

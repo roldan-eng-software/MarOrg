@@ -72,12 +72,9 @@ export default function BudgetEditPage() {
     name: "items",
   });
 
-  const { fields: installmentFields, append: appendInstallment, remove: removeInstallment } = useFieldArray({
-    control,
-    name: "payment_installments",
-  });
-
   const items = watch("items");
+  const depositPercentage = watch("deposit_percentage");
+  const installmentCount = watch("installment_count");
 
   useEffect(() => {
     Promise.all([
@@ -95,6 +92,8 @@ export default function BudgetEditPage() {
         payment_conditions: budget.payment_conditions ?? "",
         payment_installments: budget.payment_installments ?? [],
         payment_types: budget.payment_types ?? [],
+        deposit_percentage: budget.deposit_percentage ?? 0,
+        installment_count: budget.installment_count ?? 1,
         items: budget.items.map((item: BudgetItem) => ({
           item_type: item.item_type,
           description: item.description,
@@ -125,6 +124,41 @@ export default function BudgetEditPage() {
 
   const canEdit = ["rascunho", "enviado", "em_analise", "revisado"].includes(budgetStatus);
 
+  const depositValue = totalAmount * ((depositPercentage ?? 0) / 100);
+  const remaining = totalAmount - depositValue;
+  const count = installmentCount ?? 1;
+  const installmentValue = count > 0 ? remaining / count : remaining;
+
+  useEffect(() => {
+    if (!canEdit) return;
+    const pct = depositPercentage ?? 0;
+    const instCount = installmentCount ?? 1;
+    const newInstallments: BudgetFormData["payment_installments"] = [];
+
+    if (pct > 0) {
+      newInstallments.push({
+        installment: 1,
+        description: "Sinal de Entrada",
+        due_date: "",
+        percentage: pct,
+      });
+    }
+
+    const restPct = 100 - pct;
+    const perInstallmentPct = instCount > 0 ? restPct / instCount : restPct;
+
+    for (let i = 0; i < instCount; i++) {
+      newInstallments.push({
+        installment: newInstallments.length + 1,
+        description: instCount === 1 ? "Pagamento Único" : `Parcela ${i + 1}/${instCount}`,
+        due_date: "",
+        percentage: Math.round(perInstallmentPct * 100) / 100,
+      });
+    }
+
+    setValue("payment_installments", newInstallments);
+  }, [depositPercentage, installmentCount, canEdit, setValue]);
+
   async function onSubmit(data: BudgetFormData) {
     try {
       setLoading(true);
@@ -139,6 +173,8 @@ export default function BudgetEditPage() {
           payment_conditions: data.payment_conditions || null,
           payment_installments: data.payment_installments || [],
           payment_types: data.payment_types || [],
+          deposit_percentage: data.deposit_percentage ?? 0,
+          installment_count: data.installment_count ?? 1,
         },
         data.items.map((item, i) => ({
           item_type: item.item_type,
@@ -403,25 +439,8 @@ export default function BudgetEditPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>Condições de Pagamento</CardTitle>
-            {canEdit && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  appendInstallment({
-                    installment: installmentFields.length + 1,
-                    description: "",
-                    due_date: "",
-                    percentage: 0,
-                  })
-                }
-              >
-                + Adicionar Parcela
-              </Button>
-            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -447,73 +466,64 @@ export default function BudgetEditPage() {
               </div>
             </div>
 
-            {installmentFields.length > 0 && (
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-[#3D2519]">
-                  Parcelas
-                </label>
-                {installmentFields.map((field, index) => (
-                  <div
-                    key={field.id}
-                    className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3 rounded-md border border-[#D4C4B0] p-3"
-                  >
-                    <div className="w-16">
-                      <Input
-                        id={`payment_installments.${index}.installment`}
-                        label="Parcela"
-                        type="number"
-                        {...register(`payment_installments.${index}.installment`)}
-                        disabled={!canEdit}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        id={`payment_installments.${index}.description`}
-                        label="Descrição"
-                        {...register(`payment_installments.${index}.description`)}
-                        placeholder="Ex: Sinal, Entrega..."
-                        disabled={!canEdit}
-                      />
-                    </div>
-                    <div className="w-40">
-                      <Input
-                        id={`payment_installments.${index}.due_date`}
-                        label="Vencimento"
-                        type="date"
-                        {...register(`payment_installments.${index}.due_date`)}
-                        disabled={!canEdit}
-                      />
-                    </div>
-                    <div className="w-20">
-                      <Input
-                        id={`payment_installments.${index}.percentage`}
-                        label="%"
-                        type="number"
-                        step="0.01"
-                        {...register(`payment_installments.${index}.percentage`)}
-                        disabled={!canEdit}
-                      />
-                    </div>
-                    {canEdit && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeInstallment(index)}
-                      >
-                        Remover
-                      </Button>
-                    )}
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                id="deposit_percentage"
+                label="% Sinal de Entrada"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                {...register("deposit_percentage")}
+                disabled={!canEdit}
+                placeholder="Ex: 30"
+              />
+              <Input
+                id="installment_count"
+                label="Parcelas"
+                type="number"
+                min="1"
+                max="48"
+                {...register("installment_count")}
+                disabled={!canEdit}
+                placeholder="Ex: 3"
+              />
+            </div>
+
+            {totalAmount > 0 && (
+              <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-4">
+                <p className="text-sm font-medium text-[#3D2519] mb-2">Resumo do Pagamento</p>
+                <div className="space-y-1 text-sm text-[#8B7A6B]">
+                  {(depositPercentage ?? 0) > 0 && (
+                    <p>
+                      Sinal ({depositPercentage}%): <span className="font-semibold text-[#3D2519]">{formatCurrency(depositValue)}</span>
+                    </p>
+                  )}
+                  {count > 1 ? (
+                    <p>
+                      Restante: <span className="font-semibold text-[#3D2519]">{count}x de {formatCurrency(installmentValue)}</span>
+                    </p>
+                  ) : (depositPercentage ?? 0) > 0 ? (
+                    <p>
+                      Restante: <span className="font-semibold text-[#3D2519]">{formatCurrency(remaining)}</span> (pagamento único)
+                    </p>
+                  ) : (
+                    <p>
+                      Pagamento à vista: <span className="font-semibold text-[#3D2519]">{formatCurrency(totalAmount)}</span>
+                    </p>
+                  )}
+                  <p className="pt-1 border-t border-[#D4C4B0] mt-1">
+                    Total: <span className="font-bold text-[#3D2519]">{formatCurrency(totalAmount)}</span>
+                  </p>
+                </div>
               </div>
             )}
 
             <Textarea
               id="payment_conditions"
-              label="Condições gerais de pagamento"
+              label="Observações de pagamento"
               {...register("payment_conditions")}
-              placeholder="Ex: Entrada de 50% na aprovação, restante na entrega..."
+              placeholder="Ex: Entrada na aprovação, restante na entrega..."
               disabled={!canEdit}
             />
           </CardContent>

@@ -86,6 +86,10 @@ export async function createServiceOrderFromBudget(budgetId: string) {
       status: "pendente",
       priority: "normal",
       total_amount: budget.total_amount,
+      deposit_percentage: budget.deposit_percentage ?? 0,
+      installment_count: budget.installment_count ?? 1,
+      deposit_value: Number(budget.total_amount) * (Number(budget.deposit_percentage ?? 0) / 100),
+      installment_value: (Number(budget.total_amount) - (Number(budget.total_amount) * (Number(budget.deposit_percentage ?? 0) / 100))) / (budget.installment_count ?? 1),
       notes_internal: budget.notes_client,
       created_by: user.id,
     })
@@ -208,4 +212,122 @@ export async function deleteServiceOrder(id: string) {
   if (error) throw new Error("Erro ao excluir ordem de serviço");
 
   return { id };
+}
+
+export async function hasFinancialTransactions(osId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("financial_transactions")
+    .select("*", { count: "exact", head: true })
+    .eq("service_order_id", osId);
+  return (count ?? 0) > 0;
+}
+
+export async function createFinancialTransactionsFromOS(osId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const { data: order, error: orderError } = await supabase
+    .from("service_orders")
+    .select("*, customers(full_name), budgets(budget_number, payment_types)")
+    .eq("id", osId)
+    .single();
+
+  if (orderError || !order) throw new Error("Ordem de serviço não encontrada");
+
+  const { count: existingCount } = await supabase
+    .from("financial_transactions")
+    .select("*", { count: "exact", head: true })
+    .eq("service_order_id", osId);
+
+  if ((existingCount ?? 0) > 0) {
+    throw new Error("Transações financeiras já foram geradas para esta OS");
+  }
+
+  const total = Number(order.total_amount);
+  const depositPct = Number(order.deposit_percentage ?? 0);
+  const installmentCount = order.installment_count ?? 1;
+  const depositValue = total * (depositPct / 100);
+  const remaining = total - depositValue;
+  const installmentValue = remaining / installmentCount;
+  const paymentMethod = order.budgets?.payment_types?.[0] ?? null;
+  const budgetNumber = order.budgets?.budget_number ?? "";
+  const customerName = order.customers?.full_name ?? "";
+
+  const transactions: Array<{
+    transaction_type: string;
+    category: string;
+    description: string;
+    amount: number;
+    due_date: string;
+    status: string;
+    entity_type: string;
+    entity_id: string;
+    service_order_id: string;
+    budget_id: string;
+    payment_method: string | null;
+    notes: string;
+    created_by: string;
+  }> = [];
+
+  const today = new Date();
+
+  if (depositValue > 0) {
+    transactions.push({
+      transaction_type: "receita",
+      category: "Sinal",
+      description: `Sinal - ${budgetNumber} - ${customerName}`,
+      amount: depositValue,
+      due_date: today.toISOString().split("T")[0],
+      status: "pendente",
+      entity_type: "service_order",
+      entity_id: osId,
+      service_order_id: osId,
+      budget_id: order.budget_id,
+      payment_method: paymentMethod,
+      notes: `Sinal de ${depositPct}% referente à OS ${order.order_number}`,
+      created_by: user.id,
+    });
+  }
+
+  for (let i = 0; i < installmentCount; i++) {
+    const dueDate = new Date(today);
+    dueDate.setMonth(dueDate.getMonth() + i + 1);
+
+    transactions.push({
+      transaction_type: "receita",
+      category: "Parcela",
+      description: `Parcela ${i + 1}/${installmentCount} - ${budgetNumber} - ${customerName}`,
+      amount: installmentValue,
+      due_date: dueDate.toISOString().split("T")[0],
+      status: "pendente",
+      entity_type: "service_order",
+      entity_id: osId,
+      service_order_id: osId,
+      budget_id: order.budget_id,
+      payment_method: paymentMethod,
+      notes: `Parcela ${i + 1} de ${installmentCount} referente à OS ${order.order_number}`,
+      created_by: user.id,
+    });
+  }
+
+  if (transactions.length === 0) {
+    throw new Error("Nenhuma transação para gerar. Defina sinal ou parcelas no orçamento.");
+  }
+
+  const { error: insertError } = await supabase
+    .from("financial_transactions")
+    .insert(transactions);
+
+  if (insertError) {
+    console.error("Error creating financial transactions:", insertError.message);
+    throw new Error("Erro ao criar transações financeiras");
+  }
+
+  return { count: transactions.length };
 }
