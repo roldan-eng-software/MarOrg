@@ -209,7 +209,8 @@ export async function updateServiceOrderStatus(
 
 export async function linkMaterialToOrderItem(
   itemId: string,
-  materialId: string
+  materialId: string,
+  quantity: number
 ) {
   const supabase = await createClient();
 
@@ -218,57 +219,138 @@ export async function linkMaterialToOrderItem(
   } = await supabase.auth.getUser();
 
   if (!user) throw new Error("Usuário não autenticado");
+  if (quantity <= 0) throw new Error("Quantidade deve ser maior que zero");
 
   const { data: item, error: itemError } = await supabase
     .from("service_order_items")
-    .select("id, quantity, unit, description, material_id, service_order_id, service_orders(order_number)")
+    .select("id, description, service_order_id, service_orders(order_number)")
     .eq("id", itemId)
     .single();
 
   if (itemError || !item) throw new Error("Item não encontrado");
 
-  if (item.material_id) {
-    throw new Error("Este item já possui material vinculado");
+  const { data: material } = await supabase
+    .from("materials")
+    .select("id, name, current_stock, unit")
+    .eq("id", materialId)
+    .single();
+
+  if (!material) throw new Error("Material não encontrado");
+
+  if (Number(material.current_stock) < quantity) {
+    throw new Error(`Estoque insuficiente. Disponível: ${material.current_stock} ${material.unit}`);
   }
 
-  const { error: updateError } = await supabase
-    .from("service_order_items")
-    .update({ material_id: materialId })
-    .eq("id", itemId);
+  const { data: existing } = await supabase
+    .from("service_order_item_materials")
+    .select("id")
+    .eq("service_order_item_id", itemId)
+    .eq("material_id", materialId)
+    .single();
 
-  if (updateError) throw new Error("Erro ao vincular material");
-
-  const quantity = Number(item.quantity);
-  if (quantity > 0) {
-    const { data: material } = await supabase
-      .from("materials")
-      .select("id, current_stock")
-      .eq("id", materialId)
-      .single();
-
-    if (material) {
-      const newStock = Number(material.current_stock) - quantity;
-      const orderNumber = Array.isArray(item.service_orders) ? item.service_orders[0]?.order_number : (item.service_orders as { order_number: string })?.order_number || "";
-
-      await supabase.from("stock_movements").insert({
-        material_id: materialId,
-        movement_type: "reserva",
-        quantity,
-        reason: `Reserva manual - OS ${orderNumber} - ${item.description}`,
-        reference_type: "service_order",
-        reference_id: item.service_order_id,
-        service_order_item_id: itemId,
-        created_by: user.id,
-      });
-
-      await supabase
-        .from("materials")
-        .update({ current_stock: newStock })
-        .eq("id", materialId);
-    }
+  if (existing) {
+    throw new Error("Este material já está vinculado a este item");
   }
+
+  const { error: insertError } = await supabase
+    .from("service_order_item_materials")
+    .insert({
+      service_order_item_id: itemId,
+      material_id: materialId,
+      quantity,
+    });
+
+  if (insertError) throw new Error("Erro ao vincular material");
+
+  const newStock = Number(material.current_stock) - quantity;
+  const orderNumber = Array.isArray(item.service_orders) ? item.service_orders[0]?.order_number : (item.service_orders as { order_number: string })?.order_number || "";
+
+  await supabase.from("stock_movements").insert({
+    material_id: materialId,
+    movement_type: "reserva",
+    quantity,
+    reason: `Reserva - OS ${orderNumber} - ${item.description}`,
+    reference_type: "service_order",
+    reference_id: item.service_order_id,
+    service_order_item_id: itemId,
+    created_by: user.id,
+  });
+
+  await supabase
+    .from("materials")
+    .update({ current_stock: newStock })
+    .eq("id", materialId);
 
   return { success: true };
+}
+
+export async function unlinkMaterialFromOrderItem(linkId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const { data: link, error: linkError } = await supabase
+    .from("service_order_item_materials")
+    .select("id, material_id, quantity, service_order_item_id, service_order_items(description, service_order_id, service_orders(order_number))")
+    .eq("id", linkId)
+    .single();
+
+  if (linkError || !link) throw new Error("Vínculo não encontrado");
+
+  const { data: material } = await supabase
+    .from("materials")
+    .select("id, current_stock")
+    .eq("id", link.material_id)
+    .single();
+
+  if (material) {
+    const newStock = Number(material.current_stock) + Number(link.quantity);
+
+    await supabase.from("stock_movements").insert({
+      material_id: link.material_id,
+      movement_type: "liberacao",
+      quantity: Number(link.quantity),
+      reason: `Estorno de reserva - desvinculado do item`,
+      reference_type: "service_order",
+      reference_id: link.service_order_item_id,
+      created_by: user.id,
+    });
+
+    await supabase
+      .from("materials")
+      .update({ current_stock: newStock })
+      .eq("id", link.material_id);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("service_order_item_materials")
+    .delete()
+    .eq("id", linkId);
+
+  if (deleteError) throw new Error("Erro ao remover vínculo");
+
+  return { success: true };
+}
+
+export async function getServiceOrderItemMaterials(itemId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("service_order_item_materials")
+    .select("*, materials(*)")
+    .eq("service_order_item_id", itemId)
+    .order("created_at");
+
+  if (error) {
+    console.error("Error listing item materials:", error.message);
+    return [];
+  }
+
+  return data;
 }
 
 export async function deleteServiceOrder(id: string) {

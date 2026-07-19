@@ -236,6 +236,14 @@ export interface StockMovement {
   created_at: string;
 }
 
+export interface ServiceOrderItemMaterial {
+  id: string;
+  service_order_item_id: string;
+  material_id: string;
+  quantity: number;
+  created_at: string;
+}
+
 export interface Supplier {
   id: string;
   name: string;

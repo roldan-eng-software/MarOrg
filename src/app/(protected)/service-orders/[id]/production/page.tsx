@@ -8,9 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
-import { getServiceOrder, linkMaterialToOrderItem } from "@/modules/service-orders/services/service-orders.actions";
+import {
+  getServiceOrder,
+  linkMaterialToOrderItem,
+  unlinkMaterialFromOrderItem,
+  getServiceOrderItemMaterials,
+} from "@/modules/service-orders/services/service-orders.actions";
 import { registerMovement, listMaterials } from "@/modules/inventory/services/inventory.actions";
-import type { ServiceOrder, ServiceOrderItem, Customer, Material } from "@/types";
+import type { ServiceOrder, ServiceOrderItem, Customer, Material, ServiceOrderItemMaterial } from "@/types";
 
 type OrderData = ServiceOrder & {
   customers: Customer;
@@ -18,9 +23,10 @@ type OrderData = ServiceOrder & {
   items: ServiceOrderItem[];
 };
 
-interface ItemWithMaterial extends ServiceOrderItem {
-  materialData?: Material;
-  reservedQty: number;
+type MaterialLink = ServiceOrderItemMaterial & { materials: Material };
+
+interface ItemWithMeta extends ServiceOrderItem {
+  linkedMaterials: MaterialLink[];
   consumedQty: number;
 }
 
@@ -29,13 +35,16 @@ export default function ProductionPage() {
   const params = useParams();
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<ItemWithMaterial[]>([]);
+  const [items, setItems] = useState<ItemWithMeta[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [consumptionValues, setConsumptionValues] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState<string | null>(null);
+
   const [linkingItemId, setLinkingItemId] = useState<string | null>(null);
-  const [linkingMaterialId, setLinkingMaterialId] = useState<string>("");
+  const [linkingMaterialId, setLinkingMaterialId] = useState("");
+  const [linkingQuantity, setLinkingQuantity] = useState<number>(0);
   const [linking, setLinking] = useState(false);
+
+  const [consumptionValues, setConsumptionValues] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadOrder();
@@ -49,16 +58,18 @@ export default function ProductionPage() {
       const mats = await listMaterials();
       setMaterials(mats);
 
-      const matsMap = new Map(mats.map((m) => [m.id, m]));
+      const itemsWithMeta: ItemWithMeta[] = await Promise.all(
+        data.items.map(async (item) => {
+          const linked = await getServiceOrderItemMaterials(item.id);
+          return {
+            ...item,
+            linkedMaterials: linked as MaterialLink[],
+            consumedQty: 0,
+          };
+        })
+      );
 
-      const itemsWithMaterial: ItemWithMaterial[] = data.items.map((item) => ({
-        ...item,
-        materialData: item.material_id ? matsMap.get(item.material_id) : undefined,
-        reservedQty: item.quantity,
-        consumedQty: 0,
-      }));
-
-      setItems(itemsWithMaterial);
+      setItems(itemsWithMeta);
     } catch {
       showToast("Erro ao carregar ordem de serviço", "error");
     } finally {
@@ -66,24 +77,21 @@ export default function ProductionPage() {
     }
   }
 
-  async function handleConsume(itemId: string, materialId: string, materialName: string) {
-    const qty = consumptionValues[itemId];
+  async function handleConsume(linkId: string, materialId: string, materialName: string, unit: string, maxQty: number) {
+    const key = `consume-${linkId}`;
+    const qty = consumptionValues[key];
     if (!qty || qty <= 0) {
       showToast("Informe uma quantidade válida", "error");
       return;
     }
 
-    const item = items.find((it) => it.id === itemId);
-    if (!item) return;
-
-    const remaining = item.reservedQty - item.consumedQty;
-    if (qty > remaining) {
-      showToast(`Quantidade excede o reservado (${remaining})`, "error");
+    if (qty > maxQty) {
+      showToast(`Quantidade excede o vinculado (${maxQty})`, "error");
       return;
     }
 
     try {
-      setSubmitting(itemId);
+      setSubmitting(linkId);
 
       const material = materials.find((m) => m.id === materialId);
       if (!material) {
@@ -100,23 +108,26 @@ export default function ProductionPage() {
         material_id: materialId,
         movement_type: "saida",
         quantity: qty,
-        reason: `Consumo produção - OS ${order?.order_number} - ${item.description}`,
+        reason: `Consumo produção - OS ${order?.order_number}`,
         reference_type: "service_order",
         reference_id: order?.id,
       });
 
       setItems((prev) =>
-        prev.map((it) =>
-          it.id === itemId ? { ...it, consumedQty: it.consumedQty + qty } : it
-        )
+        prev.map((it) => {
+          const updatedLinked = it.linkedMaterials.map((lm) =>
+            lm.id === linkId ? { ...lm, quantity: Number(lm.quantity) - qty } : lm
+          );
+          return { ...it, linkedMaterials: updatedLinked };
+        })
       );
 
-      setConsumptionValues((prev) => ({ ...prev, [itemId]: 0 }));
+      setConsumptionValues((prev) => ({ ...prev, [key]: 0 }));
 
       const updatedMats = await listMaterials();
       setMaterials(updatedMats);
 
-      showToast(`${qty} ${material.unit} de ${materialName} registrado`, "success");
+      showToast(`${qty} ${unit} de ${materialName} consumido`, "success");
     } catch {
       showToast("Erro ao registrar consumo", "error");
     } finally {
@@ -129,26 +140,22 @@ export default function ProductionPage() {
       showToast("Selecione um material", "error");
       return;
     }
+    if (!linkingQuantity || linkingQuantity <= 0) {
+      showToast("Informe uma quantidade válida", "error");
+      return;
+    }
 
     try {
       setLinking(true);
-      await linkMaterialToOrderItem(itemId, linkingMaterialId);
+      await linkMaterialToOrderItem(itemId, linkingMaterialId, linkingQuantity);
 
       const mat = materials.find((m) => m.id === linkingMaterialId);
 
-      setItems((prev) =>
-        prev.map((it) =>
-          it.id === itemId
-            ? { ...it, material_id: linkingMaterialId, materialData: mat }
-            : it
-        )
-      );
+      await loadOrder();
 
       setLinkingItemId(null);
       setLinkingMaterialId("");
-
-      const updatedMats = await listMaterials();
-      setMaterials(updatedMats);
+      setLinkingQuantity(0);
 
       showToast(`Material ${mat?.name || ""} vinculado com sucesso`, "success");
     } catch (err) {
@@ -156,6 +163,22 @@ export default function ProductionPage() {
       showToast(message, "error");
     } finally {
       setLinking(false);
+    }
+  }
+
+  async function handleUnlinkMaterial(linkId: string) {
+    try {
+      setSubmitting(linkId);
+      await unlinkMaterialFromOrderItem(linkId);
+
+      await loadOrder();
+
+      showToast("Vínculo removido e estoque estornado", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao remover vínculo";
+      showToast(message, "error");
+    } finally {
+      setSubmitting(null);
     }
   }
 
@@ -167,8 +190,7 @@ export default function ProductionPage() {
     return <p className="py-8 text-center text-red-500">Ordem de serviço não encontrada</p>;
   }
 
-  const itemsWithMaterial = items.filter((it) => it.material_id && it.item_type === "mobiliario");
-  const itemsWithoutMaterial = items.filter((it) => !it.material_id && it.item_type === "mobiliario");
+  const mobiliarioItems = items.filter((it) => it.item_type === "mobiliario");
   const serviceItems = items.filter((it) => it.item_type === "servico");
 
   return (
@@ -190,58 +212,74 @@ export default function ProductionPage() {
         </div>
       </div>
 
-      {itemsWithMaterial.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Materiais para Produção</CardTitle>
+      {mobiliarioItems.map((item) => (
+        <Card key={item.id}>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>{item.description}</CardTitle>
+              <p className="text-xs text-[#8B7A6B] mt-1">
+                {item.quantity} {item.unit} — {item.finish && `Acabamento: ${item.finish}`}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setLinkingItemId(linkingItemId === item.id ? null : item.id);
+                setLinkingMaterialId("");
+                setLinkingQuantity(0);
+              }}
+            >
+              {linkingItemId === item.id ? "Cancelar" : "+ Material"}
+            </Button>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {itemsWithMaterial.map((item) => {
-                const mat = item.materialData;
-                const remaining = item.reservedQty - item.consumedQty;
+          <CardContent className="space-y-3">
+            {item.linkedMaterials.length > 0 ? (
+              item.linkedMaterials.map((lm) => {
+                const mat = lm.materials;
+                const remaining = Number(lm.quantity);
                 const currentStock = mat ? Number(mat.current_stock) : 0;
+                const consumeKey = `consume-${lm.id}`;
 
                 return (
-                  <div
-                    key={item.id}
-                    className="rounded border border-[#D4C4B0] p-4 space-y-3"
-                  >
+                  <div key={lm.id} className="rounded border border-[#D4C4B0] p-3 space-y-2">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-[#3D2519]">{item.description}</p>
-                        <p className="text-xs text-[#8B7A6B]">
-                          Material: {mat?.name || item.material || "-"} | Qtd reservada: {item.reservedQty} {item.unit}
-                        </p>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-[#3D2519]">{mat?.name || "Material"}</p>
+                        <div className="flex items-center gap-3 text-xs text-[#8B7A6B] mt-1">
+                          <span>
+                            Vinculado: <span className="font-semibold text-[#3D2519]">{remaining} {mat?.unit}</span>
+                          </span>
+                          <span>
+                            Estoque: <span className={currentStock < remaining ? "text-red-600 font-semibold" : "text-[#3D2519]"}>{currentStock} {mat?.unit}</span>
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="text-[#8B7A6B]">
-                          Estoque: <span className={currentStock < remaining ? "text-red-600 font-semibold" : "text-[#3D2519]"}>{currentStock} {mat?.unit}</span>
-                        </span>
-                        <span className="text-[#8B7A6B]">
-                          Restante: <span className="text-[#3D2519] font-semibold">{remaining} {item.unit}</span>
-                        </span>
-                        {item.consumedQty > 0 && (
-                          <Badge variant="success">Consumido: {item.consumedQty}</Badge>
-                        )}
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleUnlinkMaterial(lm.id)}
+                        disabled={submitting === lm.id}
+                      >
+                        {submitting === lm.id ? "..." : "Remover"}
+                      </Button>
                     </div>
 
                     {remaining > 0 && mat && (
                       <div className="flex items-end gap-3">
                         <div className="w-32">
                           <Input
-                            id={`consume-${item.id}`}
-                            label="Quantidade"
+                            id={consumeKey}
+                            label="Qtd a consumir"
                             type="number"
                             step="0.001"
                             min="0"
                             max={remaining}
-                            value={consumptionValues[item.id] || ""}
+                            value={consumptionValues[consumeKey] || ""}
                             onChange={(e) =>
                               setConsumptionValues((prev) => ({
                                 ...prev,
-                                [item.id]: Number(e.target.value),
+                                [consumeKey]: Number(e.target.value),
                               }))
                             }
                             placeholder="0"
@@ -250,100 +288,84 @@ export default function ProductionPage() {
                         <Button
                           size="sm"
                           variant="primary"
-                          onClick={() => handleConsume(item.id, item.material_id!, mat.name)}
-                          disabled={submitting === item.id || !consumptionValues[item.id]}
+                          onClick={() => handleConsume(lm.id, lm.material_id, mat.name, mat.unit, remaining)}
+                          disabled={submitting === lm.id || !consumptionValues[consumeKey]}
                         >
-                          {submitting === item.id ? "Registrando..." : "Registrar Consumo"}
+                          {submitting === lm.id ? "Registrando..." : "Consumir"}
                         </Button>
                       </div>
                     )}
 
                     {remaining <= 0 && (
                       <p className="text-sm text-green-700 bg-green-50 rounded px-3 py-2">
-                        Material totalmente consumido.
+                        Totalmente consumido.
                       </p>
                     )}
                   </div>
                 );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              })
+            ) : (
+              <p className="text-sm text-[#8B7A6B] italic">Nenhum material vinculado a este item.</p>
+            )}
 
-      {itemsWithoutMaterial.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Mobiliário sem Material Vinculado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {itemsWithoutMaterial.map((item) => (
-                <div key={item.id} className="rounded border border-[#D4C4B0] p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-[#3D2519]">{item.description}</p>
-                      <p className="text-xs text-[#8B7A6B]">
-                        {item.material ? `Material texto: ${item.material}` : "Sem material definido"} | {item.quantity} {item.unit}
-                      </p>
-                    </div>
-                    {linkingItemId !== item.id && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          setLinkingItemId(item.id);
-                          setLinkingMaterialId("");
-                        }}
-                      >
-                        Vincular Material
-                      </Button>
-                    )}
+            {linkingItemId === item.id && (
+              <div className="rounded border border-dashed border-[#5B3A29] bg-[#FAF7F4] p-4 space-y-3">
+                <p className="text-sm font-medium text-[#3D2519]">Vincular novo material</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-[#8B7A6B] mb-1 block">Material do estoque</label>
+                    <select
+                      value={linkingMaterialId}
+                      onChange={(e) => setLinkingMaterialId(e.target.value)}
+                      className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519]"
+                    >
+                      <option value="">Selecione...</option>
+                      {materials.map((mat) => (
+                        <option key={mat.id} value={mat.id}>
+                          {mat.name} — {mat.current_stock} {mat.unit} disponível
+                        </option>
+                      ))}
+                    </select>
                   </div>
-
-                  {linkingItemId === item.id && (
-                    <div className="flex items-end gap-3">
-                      <div className="flex-1 max-w-sm">
-                        <label className="text-xs text-[#8B7A6B] mb-1 block">Selecionar material do estoque</label>
-                        <select
-                          value={linkingMaterialId}
-                          onChange={(e) => setLinkingMaterialId(e.target.value)}
-                          className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519]"
-                        >
-                          <option value="">Selecione...</option>
-                          {materials.map((mat) => (
-                            <option key={mat.id} value={mat.id}>
-                              {mat.name} — {mat.current_stock} {mat.unit} disponível
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        onClick={() => handleLinkMaterial(item.id)}
-                        disabled={linking || !linkingMaterialId}
-                      >
-                        {linking ? "Vinculando..." : "Confirmar"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setLinkingItemId(null);
-                          setLinkingMaterialId("");
-                        }}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  )}
+                  <div>
+                    <Input
+                      id={`link-qty-${item.id}`}
+                      label="Quantidade"
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={linkingQuantity || ""}
+                      onChange={(e) => setLinkingQuantity(Number(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => handleLinkMaterial(item.id)}
+                    disabled={linking || !linkingMaterialId || !linkingQuantity}
+                  >
+                    {linking ? "Vinculando..." : "Confirmar Vínculo"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setLinkingItemId(null);
+                      setLinkingMaterialId("");
+                      setLinkingQuantity(0);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      ))}
 
       {serviceItems.length > 0 && (
         <Card>
@@ -366,10 +388,10 @@ export default function ProductionPage() {
         </Card>
       )}
 
-      {itemsWithMaterial.length === 0 && itemsWithoutMaterial.length === 0 && (
+      {mobiliarioItems.length === 0 && serviceItems.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-[#8B7A6B]">
-            Nenhum item de mobiliário encontrado nesta OS.
+            Nenhum item encontrado nesta OS.
           </CardContent>
         </Card>
       )}
