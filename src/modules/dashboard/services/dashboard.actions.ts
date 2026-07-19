@@ -9,8 +9,11 @@ export interface DashboardMetrics {
   totalServiceOrders: number;
   serviceOrdersByStatus: { status: string; count: number }[];
   monthlyRevenue: number;
+  monthlyExpenses: number;
+  monthlyBalance: number;
   totalRevenue: number;
-  revenueByMonth: { month: string; revenue: number }[];
+  totalExpenses: number;
+  revenueByMonth: { month: string; revenue: number; expenses: number }[];
   conversionRate: number;
   topCustomers: { name: string; total: number; count: number }[];
   recentBudgets: {
@@ -33,18 +36,25 @@ export interface DashboardMetrics {
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const supabase = await createClient();
 
+  const now = new Date();
+  const currentMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const currentMonthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-31`;
+
   const [
     customersResult,
     budgetsResult,
     serviceOrdersResult,
-    revenueResult,
+    transactionsResult,
     recentBudgetsResult,
     pendingDeliveriesResult,
   ] = await Promise.all([
     supabase.from("customers").select("id", { count: "exact", head: true }),
     supabase.from("budgets").select("status, total_amount, created_at"),
     supabase.from("service_orders").select("status, total_amount, created_at"),
-    supabase.from("budgets").select("total_amount, status, created_at"),
+    supabase
+      .from("financial_transactions")
+      .select("transaction_type, amount, status, due_date")
+      .in("status", ["pendente", "pago", "atrasado"]),
     supabase
       .from("budgets")
       .select("id, budget_number, total_amount, status, created_at, customers(full_name)")
@@ -61,7 +71,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
   const budgets = budgetsResult.data || [];
   const serviceOrders = serviceOrdersResult.data || [];
-  const allRevenue = revenueResult.data || [];
+  const transactions = transactionsResult.data || [];
 
   const totalCustomers = customersResult.count || 0;
 
@@ -88,40 +98,60 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       ? Math.round((approvedBudgets.length / sentBudgets.length) * 100)
       : 0;
 
-  const totalRevenue = allRevenue
-    .filter((b) => b.status === "aprovado")
-    .reduce((sum, b) => sum + Number(b.total_amount), 0);
+  const totalRevenue = transactions
+    .filter((t) => t.transaction_type === "receita" && t.status === "pago")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
-  const now = new Date();
-  const monthlyRevenue = allRevenue
-    .filter((b) => {
-      const d = new Date(b.created_at);
+  const totalExpenses = transactions
+    .filter((t) => t.transaction_type === "despesa" && t.status === "pago")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const monthlyRevenue = transactions
+    .filter((t) => {
+      const d = new Date(t.due_date);
       return (
-        b.status === "aprovado" &&
+        t.transaction_type === "receita" &&
+        t.status === "pago" &&
         d.getMonth() === now.getMonth() &&
         d.getFullYear() === now.getFullYear()
       );
     })
-    .reduce((sum, b) => sum + Number(b.total_amount), 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
-  const revenueByMonthMap: Record<string, number> = {};
+  const monthlyExpenses = transactions
+    .filter((t) => {
+      const d = new Date(t.due_date);
+      return (
+        t.transaction_type === "despesa" &&
+        t.status === "pago" &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+      );
+    })
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const monthlyBalance = monthlyRevenue - monthlyExpenses;
+
+  const revenueByMonthMap: Record<string, { revenue: number; expenses: number }> = {};
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    revenueByMonthMap[key] = 0;
+    revenueByMonthMap[key] = { revenue: 0, expenses: 0 };
   }
-  allRevenue
-    .filter((b) => b.status === "aprovado")
-    .forEach((b) => {
-      const d = new Date(b.created_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (key in revenueByMonthMap) {
-        revenueByMonthMap[key] += Number(b.total_amount);
+  transactions.forEach((t) => {
+    const d = new Date(t.due_date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (key in revenueByMonthMap && t.status === "pago") {
+      if (t.transaction_type === "receita") {
+        revenueByMonthMap[key].revenue += Number(t.amount);
+      } else if (t.transaction_type === "despesa") {
+        revenueByMonthMap[key].expenses += Number(t.amount);
       }
-    });
-  const revenueByMonth = Object.entries(revenueByMonthMap).map(([month, revenue]) => ({
+    }
+  });
+  const revenueByMonth = Object.entries(revenueByMonthMap).map(([month, data]) => ({
     month,
-    revenue,
+    ...data,
   }));
 
   const topCustomersResult = await supabase
@@ -170,7 +200,10 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     totalServiceOrders: serviceOrders.length,
     serviceOrdersByStatus,
     monthlyRevenue,
+    monthlyExpenses,
+    monthlyBalance,
     totalRevenue,
+    totalExpenses,
     revenueByMonth,
     conversionRate,
     topCustomers,

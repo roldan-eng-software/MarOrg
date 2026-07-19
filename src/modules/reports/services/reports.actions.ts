@@ -10,15 +10,17 @@ export interface ReportFilters {
 export interface RevenueReport {
   period: string;
   totalRevenue: number;
-  budgetCount: number;
-  approvedCount: number;
-  averageBudget: number;
+  totalExpenses: number;
+  balance: number;
+  paidCount: number;
+  averageTransaction: number;
   items: {
-    budget_number: string;
-    customer_name: string;
-    total_amount: number;
+    description: string;
+    amount: number;
+    transaction_type: string;
     status: string;
-    created_at: string;
+    due_date: string;
+    category: string;
   }[];
 }
 
@@ -90,45 +92,49 @@ export async function getRevenueReport(filters: ReportFilters): Promise<RevenueR
   const supabase = await createClient();
 
   let query = supabase
-    .from("budgets")
-    .select("budget_number, total_amount, status, created_at, customers(full_name)")
-    .eq("status", "aprovado")
-    .order("created_at", { ascending: false });
+    .from("financial_transactions")
+    .select("description, amount, transaction_type, status, due_date, category")
+    .in("status", ["pendente", "pago", "atrasado"])
+    .order("due_date", { ascending: false });
 
   if (filters.startDate) {
-    query = query.gte("created_at", filters.startDate);
+    query = query.gte("due_date", filters.startDate);
   }
   if (filters.endDate) {
-    query = query.lte("created_at", filters.endDate + "T23:59:59");
+    query = query.lte("due_date", filters.endDate);
   }
 
-  const { data: budgets } = await query;
+  const { data: transactions } = await query;
 
-  const items = (budgets || []).map((b) => ({
-    budget_number: b.budget_number,
-    customer_name: (b.customers as unknown as { full_name: string })?.full_name || "",
-    total_amount: Number(b.total_amount),
-    status: b.status,
-    created_at: b.created_at,
+  const items = (transactions || []).map((t) => ({
+    description: t.description || "",
+    amount: Number(t.amount),
+    transaction_type: t.transaction_type,
+    status: t.status,
+    due_date: t.due_date,
+    category: t.category || "",
   }));
 
-  const totalRevenue = items.reduce((sum, i) => sum + i.total_amount, 0);
-  const budgetCount = items.length;
-  const averageBudget = budgetCount > 0 ? totalRevenue / budgetCount : 0;
-
-  const { count: approvedCount } = await supabase
-    .from("budgets")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "aprovado");
+  const paidItems = items.filter((i) => i.status === "pago");
+  const totalRevenue = paidItems
+    .filter((i) => i.transaction_type === "receita")
+    .reduce((sum, i) => sum + i.amount, 0);
+  const totalExpenses = paidItems
+    .filter((i) => i.transaction_type === "despesa")
+    .reduce((sum, i) => sum + i.amount, 0);
+  const balance = totalRevenue - totalExpenses;
+  const paidCount = paidItems.length;
+  const averageTransaction = paidCount > 0 ? (totalRevenue + totalExpenses) / paidCount : 0;
 
   return {
     period: filters.startDate && filters.endDate
       ? `${filters.startDate} a ${filters.endDate}`
       : "Todos os períodos",
     totalRevenue,
-    budgetCount,
-    approvedCount: approvedCount || 0,
-    averageBudget,
+    totalExpenses,
+    balance,
+    paidCount,
+    averageTransaction,
     items,
   };
 }

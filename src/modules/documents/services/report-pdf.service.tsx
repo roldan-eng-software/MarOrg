@@ -263,29 +263,33 @@ function RevenuePDF({ data, company }: { data: RevenueReport; company: CompanySe
         <Header title="Relatório de Faturamento" period={data.period} company={company} />
 
         <View style={styles.statRow}>
-          <StatBox label="Faturamento Total" value={formatCurrency(data.totalRevenue)} />
-          <StatBox label="Orçamentos Aprovados" value={String(data.approvedCount)} />
-          <StatBox label="Ticket Médio" value={formatCurrency(data.averageBudget)} />
-          <StatBox label="Período" value={data.period} />
+          <StatBox label="Receita Total" value={formatCurrency(data.totalRevenue)} />
+          <StatBox label="Despesas Total" value={formatCurrency(data.totalExpenses)} />
+          <StatBox label="Saldo" value={formatCurrency(data.balance)} />
+          <StatBox label="Transações Pagas" value={String(data.paidCount)} />
         </View>
 
         <Text style={styles.sectionTitle}>Detalhamento</Text>
         <View style={styles.table}>
           <TableHeader columns={[
-            { label: "Orçamento", width: 80 },
-            { label: "Cliente", width: 160 },
-            { label: "Valor", width: 80, align: "right" },
-            { label: "Data", width: 80, align: "right" },
+            { label: "Descrição", width: 140 },
+            { label: "Tipo", width: 60 },
+            { label: "Categoria", width: 70 },
+            { label: "Valor", width: 70, align: "right" },
+            { label: "Status", width: 50 },
+            { label: "Vencimento", width: 70, align: "right" },
           ]} />
           {data.items.map((item, i) => (
             <TableRow
               key={i}
               isAlt={i % 2 === 1}
               columns={[
-                { value: item.budget_number, width: 80, bold: true },
-                { value: item.customer_name, width: 160 },
-                { value: formatCurrency(item.total_amount), width: 80, align: "right", bold: true },
-                { value: formatDate(item.created_at), width: 80, align: "right" },
+                { value: item.description, width: 140, bold: true },
+                { value: item.transaction_type, width: 60 },
+                { value: item.category, width: 70 },
+                { value: formatCurrency(item.amount), width: 70, align: "right", bold: true },
+                { value: item.status, width: 50 },
+                { value: formatDate(item.due_date), width: 70, align: "right" },
               ]}
             />
           ))}

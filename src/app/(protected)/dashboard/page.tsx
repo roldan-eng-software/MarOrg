@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { showToast } from "@/components/ui/toast";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import {
   getDashboardMetrics,
@@ -27,13 +27,10 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  rascunho: "bg-gray-100 text-gray-700",
-  enviado: "bg-blue-100 text-blue-700",
-  em_analise: "bg-yellow-100 text-yellow-700",
   aprovado: "bg-green-100 text-green-700",
+  enviado: "bg-blue-100 text-blue-700",
   recusado: "bg-red-100 text-red-700",
-  vencido: "bg-red-100 text-red-700",
-  revisado: "bg-blue-100 text-blue-700",
+  em_analise: "bg-yellow-100 text-yellow-700",
   pendente: "bg-yellow-100 text-yellow-700",
   em_producao: "bg-blue-100 text-blue-700",
   acabamento: "bg-purple-100 text-purple-700",
@@ -42,98 +39,45 @@ const statusColors: Record<string, string> = {
   cancelada: "bg-red-100 text-red-700",
 };
 
-const monthNames = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
-];
-
-function MetricCard({
-  title,
-  value,
-  subtitle,
-  icon,
-}: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon: string;
-}) {
+function StatCard({ label, value, subtitle, icon }: { label: string; value: string; subtitle?: string; icon?: string }) {
   return (
     <Card>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-medium text-[#8B7A6B] uppercase tracking-wide">
-              {title}
-            </p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-[#3D2519]">{value}</p>
-            {subtitle && (
-              <p className="mt-1 text-xs text-[#8B7A6B]">{subtitle}</p>
-            )}
-          </div>
-          <span className="text-2xl">{icon}</span>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2">
+          {icon && <span className="text-lg">{icon}</span>}
+          <p className="text-xs text-[#8B7A6B]">{label}</p>
         </div>
+        <p className="text-xl md:text-2xl font-bold text-[#3D2519] mt-1">{value}</p>
+        {subtitle && <p className="text-xs text-[#8B7A6B] mt-1">{subtitle}</p>}
       </CardContent>
     </Card>
   );
 }
 
-function BarChart({
-  data,
-  maxValue,
-}: {
-  data: { label: string; value: number }[];
-  maxValue: number;
-}) {
-  return (
-    <div className="flex items-end gap-2 h-32 md:h-40">
-      {data.map((item, i) => {
-        const height = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-        return (
-          <div key={i} className="flex flex-col items-center flex-1">
-            <span className="text-[10px] text-[#8B7A6B] mb-1">
-              {item.value > 0
-                ? item.value >= 1000
-                  ? `${(item.value / 1000).toFixed(1)}k`
-                  : item.value.toFixed(0)
-                : ""}
-            </span>
-            <div
-              className="w-full bg-[#5B3A29] rounded-t min-h-[2px] transition-all"
-              style={{ height: `${Math.max(height, 2)}%` }}
-            />
-            <span className="text-[10px] text-[#8B7A6B] mt-1">{item.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+function BarChart({ data }: { data: { month: string; revenue: number; expenses: number }[] }) {
+  const max = Math.max(...data.map((d) => Math.max(d.revenue, d.expenses)), 1);
 
-function HorizontalBarChart({
-  data,
-}: {
-  data: { label: string; value: number; color: string }[];
-}) {
-  const maxValue = Math.max(...data.map((d) => d.value), 1);
   return (
-    <div className="space-y-3">
-      {data.map((item, i) => {
-        const width = (item.value / maxValue) * 100;
+    <div className="flex items-end gap-2 h-48">
+      {data.map((d) => {
+        const monthLabel = new Date(d.month + "-01").toLocaleDateString("pt-BR", { month: "short" });
+        const revHeight = (d.revenue / max) * 100;
+        const expHeight = (d.expenses / max) * 100;
         return (
-          <div key={i}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-[#3D2519]">{item.label}</span>
-              <span className="text-xs font-medium text-[#3D2519]">
-                {item.value}
-              </span>
-            </div>
-            <div className="h-2 bg-[#F5F0EB] rounded-full overflow-hidden">
+          <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
+            <div className="w-full flex gap-0.5 items-end" style={{ height: "140px" }}>
               <div
-                className={`h-full rounded-full ${item.color}`}
-                style={{ width: `${width}%` }}
+                className="flex-1 rounded-t bg-green-500 min-h-[2px]"
+                style={{ height: `${revHeight}%` }}
+                title={`Receita: ${formatCurrency(d.revenue)}`}
+              />
+              <div
+                className="flex-1 rounded-t bg-red-400 min-h-[2px]"
+                style={{ height: `${expHeight}%` }}
+                title={`Despesa: ${formatCurrency(d.expenses)}`}
               />
             </div>
+            <span className="text-[10px] text-[#8B7A6B] capitalize">{monthLabel}</span>
           </div>
         );
       })}
@@ -142,265 +86,182 @@ function HorizontalBarChart({
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDashboardMetrics()
-      .then(setMetrics)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    async function load() {
+      try {
+        setMetrics(await getDashboardMetrics());
+      } catch {
+        showToast("Erro ao carregar dashboard", "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
   }, []);
 
   if (loading) {
-    return <p className="py-8 text-center text-[#8B7A6B]">Carregando...</p>;
+    return <div className="py-8 text-center text-[#8B7A6B]">Carregando dashboard...</div>;
   }
 
   if (!metrics) {
-    return (
-      <p className="py-8 text-center text-red-500">
-        Erro ao carregar métricas
-      </p>
-    );
+    return <div className="py-8 text-center text-[#8B7A6B]">Nenhum dado disponível</div>;
   }
-
-  const maxRevenue = Math.max(...metrics.revenueByMonth.map((r) => r.revenue));
-
-  const budgetStatusData = metrics.budgetsByStatus.map((b) => ({
-    label: statusLabels[b.status] || b.status,
-    value: b.count,
-    color:
-      b.status === "aprovado"
-        ? "bg-green-500"
-        : b.status === "enviado"
-          ? "bg-blue-500"
-          : b.status === "recusado"
-            ? "bg-red-500"
-            : b.status === "em_analise"
-              ? "bg-yellow-500"
-              : "bg-gray-400",
-  }));
-
-  const osStatusData = metrics.serviceOrdersByStatus.map((o) => ({
-    label: statusLabels[o.status] || o.status,
-    value: o.count,
-    color:
-      o.status === "pronto"
-        ? "bg-green-500"
-        : o.status === "em_producao"
-          ? "bg-blue-500"
-          : o.status === "acabamento"
-            ? "bg-purple-500"
-            : o.status === "entregue"
-              ? "bg-emerald-500"
-              : "bg-gray-400",
-  }));
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Dashboard</h1>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <MetricCard
-          title="Clientes"
-          value={metrics.totalCustomers.toString()}
-          icon="👥"
-        />
-        <MetricCard
-          title="Orçamentos"
-          value={metrics.totalBudgets.toString()}
-          subtitle={`${metrics.conversionRate}% conversão`}
-          icon="📋"
-        />
-        <MetricCard
-          title="Ordens de Serviço"
-          value={metrics.totalServiceOrders.toString()}
-          icon="🔧"
-        />
-        <MetricCard
-          title="Faturamento Mensal"
-          value={formatCurrency(metrics.monthlyRevenue)}
-          subtitle={`Total: ${formatCurrency(metrics.totalRevenue)}`}
-          icon="💰"
-        />
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl md:text-2xl font-bold text-[#3D2519]">Dashboard</h1>
+        <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
+          Atualizar
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Receita Mensal" value={formatCurrency(metrics.monthlyRevenue)} icon="📈" />
+        <StatCard label="Despesas Mensal" value={formatCurrency(metrics.monthlyExpenses)} icon="📉" />
+        <StatCard label="Saldo Mensal" value={formatCurrency(metrics.monthlyBalance)} icon="💰"
+          subtitle={metrics.monthlyBalance >= 0 ? "Positivo" : "Negativo"} />
+        <StatCard label="Clientes" value={String(metrics.totalCustomers)} icon="👥" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Orçamentos" value={String(metrics.totalBudgets)} subtitle={`${metrics.conversionRate}% conversão`} />
+        <StatCard label="Ordens de Serviço" value={String(metrics.totalServiceOrders)} />
+        <StatCard label="Receita Total" value={formatCurrency(metrics.totalRevenue)} />
+        <StatCard label="Despesas Total" value={formatCurrency(metrics.totalExpenses)} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Faturamento (6 meses)</CardTitle>
+            <CardTitle className="text-sm text-[#3D2519]">Receita vs Despesas (6 meses)</CardTitle>
           </CardHeader>
           <CardContent>
-            <BarChart
-              data={metrics.revenueByMonth.map((r) => {
-                const [, month] = r.month.split("-");
-                return {
-                  label: monthNames[parseInt(month) - 1],
-                  value: r.revenue,
-                };
-              })}
-              maxValue={maxRevenue}
-            />
+            <BarChart data={metrics.revenueByMonth} />
+            <div className="flex gap-4 mt-3 justify-center">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-green-500" />
+                <span className="text-xs text-[#8B7A6B]">Receita</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-red-400" />
+                <span className="text-xs text-[#8B7A6B]">Despesa</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Orçamentos por Status</CardTitle>
+            <CardTitle className="text-sm text-[#3D2519]">Orçamentos por Status</CardTitle>
           </CardHeader>
           <CardContent>
-            {budgetStatusData.length > 0 ? (
-              <HorizontalBarChart data={budgetStatusData} />
-            ) : (
-              <p className="text-sm text-[#8B7A6B]">Nenhum orçamento</p>
-            )}
+            <div className="grid grid-cols-2 gap-2">
+              {metrics.budgetsByStatus.map((s) => (
+                <div key={s.status} className="flex items-center justify-between p-2 rounded border border-[#D4C4B0]">
+                  <span className={`text-[10px] px-2 py-0.5 rounded ${statusColors[s.status] || "bg-gray-100 text-gray-700"}`}>
+                    {statusLabels[s.status] || s.status}
+                  </span>
+                  <span className="text-sm font-bold text-[#3D2519]">{s.count}</span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>OS por Status</CardTitle>
+            <CardTitle className="text-sm text-[#3D2519]">Orçamentos Recentes</CardTitle>
           </CardHeader>
           <CardContent>
-            {osStatusData.length > 0 ? (
-              <HorizontalBarChart data={osStatusData} />
-            ) : (
-              <p className="text-sm text-[#8B7A6B]">Nenhuma ordem de serviço</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Clientes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {metrics.topCustomers.length > 0 ? (
-              <div className="space-y-3">
-                {metrics.topCustomers.map((c, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border-b border-[#F5F0EB] pb-2 last:border-0"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-[#3D2519]">
-                        {c.name}
-                      </p>
-                      <p className="text-xs text-[#8B7A6B]">
-                        {c.count} orçamento{c.count > 1 ? "s" : ""}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold text-[#3D2519]">
-                      {formatCurrency(c.total)}
+            <div className="space-y-2">
+              {metrics.recentBudgets.length === 0 && (
+                <p className="text-sm text-[#8B7A6B]">Nenhum orçamento</p>
+              )}
+              {metrics.recentBudgets.map((b) => (
+                <div key={b.id} className="flex items-center justify-between p-2 rounded border border-[#F5F0EB]">
+                  <div>
+                    <p className="text-xs font-mono text-[#3D2519]">{b.budget_number}</p>
+                    <p className="text-xs text-[#8B7A6B]">{b.customer_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-[#3D2519]">{formatCurrency(b.total_amount)}</p>
+                    <span className={`text-[10px] px-2 py-0.5 rounded ${statusColors[b.status] || "bg-gray-100 text-gray-700"}`}>
+                      {statusLabels[b.status] || b.status}
                     </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-[#8B7A6B]">Nenhum cliente</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Orçamentos Recentes</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/budgets")}
-            >
-              Ver todos
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {metrics.recentBudgets.length > 0 ? (
-              <div className="space-y-3">
-                {metrics.recentBudgets.map((b) => (
-                  <div
-                    key={b.id}
-                    className="flex items-center justify-between border-b border-[#F5F0EB] pb-2 last:border-0 cursor-pointer hover:bg-[#F5F0EB] -mx-2 px-2 rounded"
-                    onClick={() => router.push(`/budgets/${b.id}/edit`)}
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-[#3D2519]">
-                        {b.budget_number}
-                      </p>
-                      <p className="text-xs text-[#8B7A6B]">
-                        {b.customer_name} • {formatDate(b.created_at)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded ${statusColors[b.status] || "bg-gray-100 text-gray-700"}`}
-                      >
-                        {statusLabels[b.status] || b.status}
-                      </span>
-                      <span className="text-sm font-semibold text-[#3D2519]">
-                        {formatCurrency(b.total_amount)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-[#8B7A6B]">Nenhum orçamento</p>
-            )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Próximas Entregas</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/service-orders")}
-            >
-              Ver todas
-            </Button>
+          <CardHeader>
+            <CardTitle className="text-sm text-[#3D2519]">Entregas Previstas</CardTitle>
           </CardHeader>
           <CardContent>
-            {metrics.pendingDeliveries.length > 0 ? (
-              <div className="space-y-3">
-                {metrics.pendingDeliveries.map((o) => (
-                  <div
-                    key={o.id}
-                    className="flex items-center justify-between border-b border-[#F5F0EB] pb-2 last:border-0 cursor-pointer hover:bg-[#F5F0EB] -mx-2 px-2 rounded"
-                    onClick={() => router.push(`/service-orders/${o.id}`)}
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-[#3D2519]">
-                        {o.order_number}
-                      </p>
-                      <p className="text-xs text-[#8B7A6B]">
-                        {o.customer_name}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded ${statusColors[o.status] || "bg-gray-100 text-gray-700"}`}
-                      >
-                        {statusLabels[o.status] || o.status}
-                      </span>
-                      <span className="text-xs text-[#8B7A6B]">
-                        {formatDate(o.estimated_delivery)}
-                      </span>
-                    </div>
+            <div className="space-y-2">
+              {metrics.pendingDeliveries.length === 0 && (
+                <p className="text-sm text-[#8B7A6B]">Nenhuma entrega prevista</p>
+              )}
+              {metrics.pendingDeliveries.map((o) => (
+                <div key={o.id} className="flex items-center justify-between p-2 rounded border border-[#F5F0EB]">
+                  <div>
+                    <p className="text-xs font-mono text-[#3D2519]">{o.order_number}</p>
+                    <p className="text-xs text-[#8B7A6B]">{o.customer_name}</p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-[#8B7A6B]">Nenhuma entrega pendente</p>
-            )}
+                  <div className="text-right">
+                    <p className="text-xs text-[#8B7A6B]">{formatDate(o.estimated_delivery)}</p>
+                    <span className={`text-[10px] px-2 py-0.5 rounded ${statusColors[o.status] || "bg-gray-100 text-gray-700"}`}>
+                      {statusLabels[o.status] || o.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm text-[#3D2519]">Top Clientes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {metrics.topCustomers.length === 0 ? (
+            <p className="text-sm text-[#8B7A6B]">Nenhum cliente com orçamentos aprovados</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#D4C4B0]">
+                    <th className="text-left py-2 text-xs text-[#8B7A6B]">#</th>
+                    <th className="text-left py-2 text-xs text-[#8B7A6B]">Cliente</th>
+                    <th className="text-right py-2 text-xs text-[#8B7A6B]">Orçamentos</th>
+                    <th className="text-right py-2 text-xs text-[#8B7A6B]">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.topCustomers.map((c, i) => (
+                    <tr key={i} className="border-b border-[#F5F0EB]">
+                      <td className="py-2 text-[#8B7A6B]">{i + 1}</td>
+                      <td className="py-2 font-medium">{c.name}</td>
+                      <td className="py-2 text-right">{c.count}</td>
+                      <td className="py-2 text-right font-semibold">{formatCurrency(c.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -172,10 +172,11 @@ export default function ReportsPage() {
       {!loading && activeTab === "revenue" && revenueData && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard label="Faturamento Total" value={formatCurrency(revenueData.totalRevenue)} />
-            <StatCard label="Orçamentos Aprovados" value={String(revenueData.approvedCount)} />
-            <StatCard label="Ticket Médio" value={formatCurrency(revenueData.averageBudget)} />
-            <StatCard label="Período" value={revenueData.period} />
+            <StatCard label="Receita Total" value={formatCurrency(revenueData.totalRevenue)} />
+            <StatCard label="Despesas Total" value={formatCurrency(revenueData.totalExpenses)} />
+            <StatCard label="Saldo" value={formatCurrency(revenueData.balance)}
+              subtitle={revenueData.balance >= 0 ? "Positivo" : "Negativo"} />
+            <StatCard label="Transações Pagas" value={String(revenueData.paidCount)} />
           </div>
           <Card>
             <CardHeader><CardTitle>Detalhamento</CardTitle></CardHeader>
@@ -184,19 +185,33 @@ export default function ReportsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[#D4C4B0]">
-                      <th className="text-left py-2 text-xs text-[#8B7A6B]">Orçamento</th>
-                      <th className="text-left py-2 text-xs text-[#8B7A6B]">Cliente</th>
+                      <th className="text-left py-2 text-xs text-[#8B7A6B]">Descrição</th>
+                      <th className="text-left py-2 text-xs text-[#8B7A6B]">Tipo</th>
+                      <th className="text-left py-2 text-xs text-[#8B7A6B]">Categoria</th>
                       <th className="text-right py-2 text-xs text-[#8B7A6B]">Valor</th>
-                      <th className="text-left py-2 text-xs text-[#8B7A6B] hidden sm:table-cell">Data</th>
+                      <th className="text-left py-2 text-xs text-[#8B7A6B]">Status</th>
+                      <th className="text-left py-2 text-xs text-[#8B7A6B] hidden sm:table-cell">Vencimento</th>
                     </tr>
                   </thead>
                   <tbody>
                     {revenueData.items.map((item, i) => (
                       <tr key={i} className="border-b border-[#F5F0EB]">
-                        <td className="py-2 font-mono text-xs">{item.budget_number}</td>
-                        <td className="py-2">{item.customer_name}</td>
-                        <td className="py-2 text-right font-semibold">{formatCurrency(item.total_amount)}</td>
-                        <td className="py-2 text-xs text-[#8B7A6B] hidden sm:table-cell">{formatDate(item.created_at)}</td>
+                        <td className="py-2 font-medium">{item.description}</td>
+                        <td className="py-2 text-xs capitalize">
+                          <span className={`px-2 py-0.5 rounded ${item.transaction_type === "receita" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {item.transaction_type}
+                          </span>
+                        </td>
+                        <td className="py-2 text-xs text-[#8B7A6B]">{item.category}</td>
+                        <td className={`py-2 text-right font-semibold ${item.transaction_type === "receita" ? "text-green-700" : "text-red-600"}`}>
+                          {item.transaction_type === "despesa" ? "-" : ""}{formatCurrency(item.amount)}
+                        </td>
+                        <td className="py-2 text-xs">
+                          <span className={`px-2 py-0.5 rounded ${item.status === "pago" ? "bg-green-100 text-green-700" : item.status === "atrasado" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="py-2 text-xs text-[#8B7A6B] hidden sm:table-cell">{formatDate(item.due_date)}</td>
                       </tr>
                     ))}
                   </tbody>
