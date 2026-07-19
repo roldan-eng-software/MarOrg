@@ -279,3 +279,21 @@ export interface Purchase {
   created_at: string;
   updated_at: string;
 }
+
+export interface ScheduleEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_date: string;
+  event_time: string | null;
+  end_time: string | null;
+  event_type: "reuniao" | "visita" | "followup" | "outro";
+  color: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  customer_id: string | null;
+  completed: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
