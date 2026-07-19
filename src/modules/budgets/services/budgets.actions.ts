@@ -188,7 +188,7 @@ export async function updateBudget(
         .insert(
           items.map((item, i) => ({
             ...item,
-            id: item.id || undefined,
+            ...(item.id ? { id: item.id } : {}),
             budget_id: id,
             sort_order: i,
           }))
