@@ -207,6 +207,70 @@ export async function updateServiceOrderStatus(
   return { id };
 }
 
+export async function linkMaterialToOrderItem(
+  itemId: string,
+  materialId: string
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const { data: item, error: itemError } = await supabase
+    .from("service_order_items")
+    .select("id, quantity, unit, description, material_id, service_order_id, service_orders(order_number)")
+    .eq("id", itemId)
+    .single();
+
+  if (itemError || !item) throw new Error("Item não encontrado");
+
+  if (item.material_id) {
+    throw new Error("Este item já possui material vinculado");
+  }
+
+  const { error: updateError } = await supabase
+    .from("service_order_items")
+    .update({ material_id: materialId })
+    .eq("id", itemId);
+
+  if (updateError) throw new Error("Erro ao vincular material");
+
+  const quantity = Number(item.quantity);
+  if (quantity > 0) {
+    const { data: material } = await supabase
+      .from("materials")
+      .select("id, current_stock")
+      .eq("id", materialId)
+      .single();
+
+    if (material) {
+      const newStock = Number(material.current_stock) - quantity;
+      const orderNumber = Array.isArray(item.service_orders) ? item.service_orders[0]?.order_number : (item.service_orders as { order_number: string })?.order_number || "";
+
+      await supabase.from("stock_movements").insert({
+        material_id: materialId,
+        movement_type: "reserva",
+        quantity,
+        reason: `Reserva manual - OS ${orderNumber} - ${item.description}`,
+        reference_type: "service_order",
+        reference_id: item.service_order_id,
+        service_order_item_id: itemId,
+        created_by: user.id,
+      });
+
+      await supabase
+        .from("materials")
+        .update({ current_stock: newStock })
+        .eq("id", materialId);
+    }
+  }
+
+  return { success: true };
+}
+
 export async function deleteServiceOrder(id: string) {
   const supabase = await createClient();
 

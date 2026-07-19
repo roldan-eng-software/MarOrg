@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
-import { getServiceOrder } from "@/modules/service-orders/services/service-orders.actions";
+import { getServiceOrder, linkMaterialToOrderItem } from "@/modules/service-orders/services/service-orders.actions";
 import { registerMovement, listMaterials } from "@/modules/inventory/services/inventory.actions";
 import type { ServiceOrder, ServiceOrderItem, Customer, Material } from "@/types";
 
@@ -33,6 +33,9 @@ export default function ProductionPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [consumptionValues, setConsumptionValues] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [linkingItemId, setLinkingItemId] = useState<string | null>(null);
+  const [linkingMaterialId, setLinkingMaterialId] = useState<string>("");
+  const [linking, setLinking] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -118,6 +121,41 @@ export default function ProductionPage() {
       showToast("Erro ao registrar consumo", "error");
     } finally {
       setSubmitting(null);
+    }
+  }
+
+  async function handleLinkMaterial(itemId: string) {
+    if (!linkingMaterialId) {
+      showToast("Selecione um material", "error");
+      return;
+    }
+
+    try {
+      setLinking(true);
+      await linkMaterialToOrderItem(itemId, linkingMaterialId);
+
+      const mat = materials.find((m) => m.id === linkingMaterialId);
+
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === itemId
+            ? { ...it, material_id: linkingMaterialId, materialData: mat }
+            : it
+        )
+      );
+
+      setLinkingItemId(null);
+      setLinkingMaterialId("");
+
+      const updatedMats = await listMaterials();
+      setMaterials(updatedMats);
+
+      showToast(`Material ${mat?.name || ""} vinculado com sucesso`, "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao vincular material";
+      showToast(message, "error");
+    } finally {
+      setLinking(false);
     }
   }
 
@@ -239,16 +277,67 @@ export default function ProductionPage() {
             <CardTitle>Mobiliário sem Material Vinculado</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {itemsWithoutMaterial.map((item) => (
-                <div key={item.id} className="flex items-center justify-between rounded border border-[#D4C4B0] p-3">
-                  <div>
-                    <p className="text-sm font-medium text-[#3D2519]">{item.description}</p>
-                    <p className="text-xs text-[#8B7A6B]">
-                      {item.material ? `Material texto: ${item.material}` : "Sem material definido"} | {item.quantity} {item.unit}
-                    </p>
+                <div key={item.id} className="rounded border border-[#D4C4B0] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-[#3D2519]">{item.description}</p>
+                      <p className="text-xs text-[#8B7A6B]">
+                        {item.material ? `Material texto: ${item.material}` : "Sem material definido"} | {item.quantity} {item.unit}
+                      </p>
+                    </div>
+                    {linkingItemId !== item.id && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setLinkingItemId(item.id);
+                          setLinkingMaterialId("");
+                        }}
+                      >
+                        Vincular Material
+                      </Button>
+                    )}
                   </div>
-                  <Badge variant="warning">Sem vínculo</Badge>
+
+                  {linkingItemId === item.id && (
+                    <div className="flex items-end gap-3">
+                      <div className="flex-1 max-w-sm">
+                        <label className="text-xs text-[#8B7A6B] mb-1 block">Selecionar material do estoque</label>
+                        <select
+                          value={linkingMaterialId}
+                          onChange={(e) => setLinkingMaterialId(e.target.value)}
+                          className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519]"
+                        >
+                          <option value="">Selecione...</option>
+                          {materials.map((mat) => (
+                            <option key={mat.id} value={mat.id}>
+                              {mat.name} — {mat.current_stock} {mat.unit} disponível
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => handleLinkMaterial(item.id)}
+                        disabled={linking || !linkingMaterialId}
+                      >
+                        {linking ? "Vinculando..." : "Confirmar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setLinkingItemId(null);
+                          setLinkingMaterialId("");
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
