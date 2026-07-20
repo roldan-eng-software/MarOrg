@@ -453,7 +453,8 @@ export async function createFinancialTransactionsFromOS(osId: string) {
   const { count: existingCount } = await supabase
     .from("financial_transactions")
     .select("*", { count: "exact", head: true })
-    .eq("service_order_id", osId);
+    .eq("service_order_id", osId)
+    .eq("transaction_type", "receita");
 
   if ((existingCount ?? 0) > 0) {
     throw new Error("Transações financeiras já foram geradas para esta OS");
