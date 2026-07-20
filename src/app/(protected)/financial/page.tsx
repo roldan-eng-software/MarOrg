@@ -57,9 +57,12 @@ export default function FinancialPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | null>(null);
-  const [filters, setFilters] = useState<FinancialFilters>({});
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split("T")[0];
+  const [filters, setFilters] = useState<FinancialFilters>({ startDate: firstDay, endDate: lastDay });
+  const [startDate, setStartDate] = useState(firstDay);
+  const [endDate, setEndDate] = useState(lastDay);
   const [typeFilter, setTypeFilter] = useState<"receita" | "despesa" | "">("");
   const lastFetchRef = useRef(0);
 
