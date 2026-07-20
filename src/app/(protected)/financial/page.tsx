@@ -327,6 +327,16 @@ export default function FinancialPage() {
                               Pago
                             </Button>
                           )}
+                          {t.status === "pago" && t.transaction_type === "receita" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600"
+                              onClick={() => window.open(`/api/financial/${t.id}/receipt`, "_blank")}
+                            >
+                              Recibo
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
