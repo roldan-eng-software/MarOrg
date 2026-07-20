@@ -23,6 +23,8 @@ interface WeekViewProps {
     amount: number;
     due_date: string;
     status: string;
+    customer_name: string | null;
+    order_number: string | null;
   }>;
   events: ScheduleEvent[];
   onDateClick: (date: string) => void;
@@ -164,18 +166,26 @@ export function WeekView({
                 ))}
 
                 {/* Financial */}
-                {dayFinancial.map((fin) => (
+                {dayFinancial.slice(0, 3).map((fin) => (
                   <div
                     key={fin.id}
                     className="rounded px-1.5 py-1 text-[10px]"
                     style={{
-                      backgroundColor: fin.transaction_type === "receita" ? "#10B98120" : "#EF444420",
-                      borderLeft: `3px solid ${fin.transaction_type === "receita" ? "#10B981" : "#EF4444"}`,
+                      backgroundColor: fin.category === "pro-labore"
+                        ? "#A855F720"
+                        : fin.transaction_type === "receita" ? "#10B98120" : "#EF444420",
+                      borderLeft: `3px solid ${fin.category === "pro-labore"
+                        ? "#A855F7"
+                        : fin.transaction_type === "receita" ? "#10B981" : "#EF4444"}`,
                     }}
                   >
                     <p
                       className="font-medium truncate"
-                      style={{ color: fin.transaction_type === "receita" ? "#059669" : "#DC2626" }}
+                      style={{
+                        color: fin.category === "pro-labore"
+                          ? "#9333EA"
+                          : fin.transaction_type === "receita" ? "#059669" : "#DC2626"
+                      }}
                     >
                       {fin.category}
                     </p>
@@ -184,8 +194,29 @@ export function WeekView({
                         Number(fin.amount)
                       )}
                     </p>
+                    {fin.customer_name && (
+                      <p className="text-[8px] text-[#8B7A6B] truncate">{fin.customer_name}</p>
+                    )}
                   </div>
                 ))}
+                {dayFinancial.length > 3 && (
+                  <span className="text-[8px] text-[#8B7A6B]">+{dayFinancial.length - 3}</span>
+                )}
+                {dayFinancial.length > 0 && (() => {
+                  const receitas = dayFinancial.filter((f) => f.transaction_type === "receita").reduce((s, f) => s + f.amount, 0);
+                  const despesas = dayFinancial.filter((f) => f.transaction_type === "despesa").reduce((s, f) => s + f.amount, 0);
+                  const proLabore = dayFinancial.filter((f) => f.category === "pro-labore").reduce((s, f) => s + f.amount, 0);
+                  const saldo = receitas - despesas - proLabore;
+                  return (
+                    <div className="rounded bg-[#F5F0EB] px-1.5 py-0.5 text-[8px] space-y-0.5">
+                      {receitas > 0 && <p className="text-green-600">+{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(receitas)}</p>}
+                      {(despesas > 0 || proLabore > 0) && <p className="text-red-600">-{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(despesas + proLabore)}</p>}
+                      <p className={`font-bold ${saldo >= 0 ? "text-green-700" : "text-red-700"}`}>
+                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(saldo)}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* Events without time */}
                 {dayEvents

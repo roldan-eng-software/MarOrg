@@ -121,7 +121,11 @@ export async function getFinancialDueDates(year: number, month: number) {
 
   const { data, error } = await supabase
     .from("financial_transactions")
-    .select("id, transaction_type, category, description, amount, due_date, status, service_order_id")
+    .select(`
+      id, transaction_type, category, description, amount,
+      due_date, status, service_order_id,
+      service_orders!left(order_number, customers(full_name))
+    `)
     .gte("due_date", startDate)
     .lte("due_date", endDate)
     .neq("status", "cancelado")
@@ -132,5 +136,23 @@ export async function getFinancialDueDates(year: number, month: number) {
     return [];
   }
 
-  return data;
+  return (data || []).map((t) => {
+    const soData = t.service_orders as unknown as {
+      order_number: string | null;
+      customers: { full_name: string } | null;
+    } | null;
+
+    return {
+      id: t.id,
+      transaction_type: t.transaction_type,
+      category: t.category,
+      description: t.description,
+      amount: Number(t.amount),
+      due_date: t.due_date,
+      status: t.status,
+      service_order_id: t.service_order_id,
+      order_number: soData?.order_number ?? null,
+      customer_name: soData?.customers?.full_name ?? null,
+    };
+  });
 }

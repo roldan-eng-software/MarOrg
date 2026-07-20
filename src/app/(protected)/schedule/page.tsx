@@ -36,6 +36,9 @@ interface FinancialDueDate {
   amount: number;
   due_date: string;
   status: string;
+  service_order_id: string | null;
+  order_number: string | null;
+  customer_name: string | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -193,7 +196,21 @@ export default function SchedulePage() {
     const pendingReceives = monthFinancial
       .filter((f) => f.transaction_type === "receita" && f.status === "pendente")
       .reduce((sum, f) => sum + Number(f.amount), 0);
-    return { count: monthOrders.length, totalValue, eventCount: events.length, pendingReceives };
+    const totalExpenses = monthFinancial
+      .filter((f) => f.transaction_type === "despesa")
+      .reduce((sum, f) => sum + Number(f.amount), 0);
+    const totalProLabore = monthFinancial
+      .filter((f) => f.category === "pro-labore")
+      .reduce((sum, f) => sum + Number(f.amount), 0);
+    return { count: monthOrders.length, totalValue, eventCount: events.length, pendingReceives, totalExpenses, totalProLabore };
+  }
+
+  function getDayFinancialSummary(dateKey: string) {
+    const items = getFinancialForDate(dateKey);
+    const receitas = items.filter((f) => f.transaction_type === "receita").reduce((s, f) => s + f.amount, 0);
+    const despesas = items.filter((f) => f.transaction_type === "despesa").reduce((s, f) => s + f.amount, 0);
+    const proLabore = items.filter((f) => f.category === "pro-labore").reduce((s, f) => s + f.amount, 0);
+    return { receitas, despesas, proLabore, saldo: receitas - despesas - proLabore, count: items.length };
   }
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
@@ -314,10 +331,10 @@ export default function SchedulePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-[#8B7A6B]">Entregas no Mês</p>
+            <p className="text-xs text-[#8B7A6B]">Entregas</p>
             <p className="text-xl font-bold text-[#3D2519]">{monthStats.count}</p>
           </CardContent>
         </Card>
@@ -331,6 +348,18 @@ export default function SchedulePage() {
           <CardContent className="p-3">
             <p className="text-xs text-[#8B7A6B]">A Receber</p>
             <p className="text-xl font-bold text-green-700">{formatCurrency(monthStats.pendingReceives)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-[#8B7A6B]">Despesas</p>
+            <p className="text-xl font-bold text-red-700">{formatCurrency(monthStats.totalExpenses)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-[#8B7A6B]">Pró-Labore</p>
+            <p className="text-xl font-bold text-purple-700">{formatCurrency(monthStats.totalProLabore)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -384,6 +413,7 @@ export default function SchedulePage() {
                     const dayOrders = showOrders ? getOrdersForDate(dateKey) : [];
                     const dayFinancial = showFinancial ? getFinancialForDate(dateKey) : [];
                     const dayEvents = showEvents ? getEventsForDate(dateKey) : [];
+                    const daySummary = getDayFinancialSummary(dateKey);
                     const today = isToday(currentYear, currentMonth, day);
                     const past = isPast(currentYear, currentMonth, day);
                     const selected = selectedDate === dateKey;
@@ -436,13 +466,15 @@ export default function SchedulePage() {
                               {o.order_number}
                             </div>
                           ))}
-                          {dayFinancial.slice(0, 1).map((f) => (
+                          {dayFinancial.slice(0, 2).map((f) => (
                             <div
                               key={f.id}
                               className={`text-[7px] leading-tight px-1 py-0.5 rounded truncate ${
-                                f.transaction_type === "receita"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-red-100 text-red-700"
+                                f.category === "pro-labore"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : f.transaction_type === "receita"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-red-100 text-red-700"
                               }`}
                             >
                               {f.category}
@@ -457,6 +489,19 @@ export default function SchedulePage() {
                               {e.title}
                             </div>
                           ))}
+                          {daySummary.count > 0 && (
+                            <div className="text-[6px] leading-tight px-1 flex gap-1">
+                              {daySummary.receitas > 0 && (
+                                <span className="text-green-600">+{formatCurrency(daySummary.receitas)}</span>
+                              )}
+                              {daySummary.despesas > 0 && (
+                                <span className="text-red-600">-{formatCurrency(daySummary.despesas)}</span>
+                              )}
+                              {daySummary.proLabore > 0 && (
+                                <span className="text-purple-600">P{formatCurrency(daySummary.proLabore)}</span>
+                              )}
+                            </div>
+                          )}
                           {totalItems > 4 && (
                             <span className="text-[7px] text-[#8B7A6B]">+{totalItems - 4}</span>
                           )}
@@ -492,6 +537,43 @@ export default function SchedulePage() {
             <CardContent>
               {selectedDate ? (
                 <div className="space-y-4">
+                  {/* Daily Financial Summary */}
+                  {(() => {
+                    const summary = getDayFinancialSummary(selectedDate);
+                    if (summary.count === 0) return null;
+                    return (
+                      <div className="rounded-lg border border-[#D4C4B0] p-3 space-y-1.5">
+                        <p className="text-xs font-medium text-[#8B7A6B]">Resumo do Dia</p>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          {summary.receitas > 0 && (
+                            <div>
+                              <p className="text-[10px] text-green-600">Receitas</p>
+                              <p className="text-sm font-bold text-green-700">{formatCurrency(summary.receitas)}</p>
+                            </div>
+                          )}
+                          {summary.despesas > 0 && (
+                            <div>
+                              <p className="text-[10px] text-red-600">Despesas</p>
+                              <p className="text-sm font-bold text-red-700">{formatCurrency(summary.despesas)}</p>
+                            </div>
+                          )}
+                          {summary.proLabore > 0 && (
+                            <div>
+                              <p className="text-[10px] text-purple-600">Pro-Labore</p>
+                              <p className="text-sm font-bold text-purple-700">{formatCurrency(summary.proLabore)}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t border-[#F5F0EB] pt-1 flex items-center justify-between">
+                          <span className="text-xs text-[#8B7A6B]">Saldo do dia</span>
+                          <span className={`text-sm font-bold ${summary.saldo >= 0 ? "text-green-700" : "text-red-700"}`}>
+                            {formatCurrency(summary.saldo)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Events */}
                   {selectedEvents.length > 0 && (
                     <div>
@@ -567,27 +649,55 @@ export default function SchedulePage() {
                   {/* Financial */}
                   {selectedFinancial.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-[#8B7A6B] mb-2">Financeiro</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-medium text-[#8B7A6B]">Financeiro</p>
+                        <button
+                          onClick={() => router.push("/financial")}
+                          className="text-[10px] text-[#5B3A29] hover:underline"
+                        >
+                          Ver no Fluxo
+                        </button>
+                      </div>
                       <div className="space-y-2">
                         {selectedFinancial.map((fin) => (
                           <div
                             key={fin.id}
                             className="rounded-lg border p-2.5"
                             style={{
-                              borderLeftColor: fin.transaction_type === "receita" ? "#10B981" : "#EF4444",
+                              borderLeftColor: fin.category === "pro-labore"
+                                ? "#A855F7"
+                                : fin.transaction_type === "receita" ? "#10B981" : "#EF4444",
                               borderLeftWidth: 3,
                             }}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-[#3D2519]">{fin.category}</span>
-                              <Badge className={fin.status === "pago" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}>
+                              <Badge className={
+                                fin.status === "pago"
+                                  ? "bg-green-100 text-green-700"
+                                  : fin.status === "pendente"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-gray-100 text-gray-600"
+                              }>
                                 {fin.status}
                               </Badge>
                             </div>
-                            <p className="text-sm font-semibold" style={{ color: fin.transaction_type === "receita" ? "#059669" : "#DC2626" }}>
+                            <p className="text-sm font-semibold" style={{
+                              color: fin.category === "pro-labore"
+                                ? "#9333EA"
+                                : fin.transaction_type === "receita" ? "#059669" : "#DC2626"
+                            }}>
                               {formatCurrency(fin.amount)}
                             </p>
-                            <p className="text-[10px] text-[#8B7A6B] mt-0.5 truncate">{fin.description}</p>
+                            {fin.customer_name && (
+                              <p className="text-[10px] text-[#8B7A6B] mt-0.5">{fin.customer_name}</p>
+                            )}
+                            {fin.order_number && (
+                              <p className="text-[10px] text-[#8B7A6B]">{fin.order_number}</p>
+                            )}
+                            {fin.description && (
+                              <p className="text-[10px] text-[#8B7A6B] mt-0.5 truncate">{fin.description}</p>
+                            )}
                           </div>
                         ))}
                       </div>
