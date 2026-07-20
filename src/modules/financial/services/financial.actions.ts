@@ -13,6 +13,8 @@ export interface FinancialFilters {
 export interface FinancialSummary {
   totalReceitas: number;
   totalDespesas: number;
+  totalDespesasOperacionais: number;
+  totalProLabore: number;
   saldo: number;
   receitasPendentes: number;
   despesasPendentes: number;
@@ -66,6 +68,12 @@ export async function getFinancialSummary(filters: FinancialFilters): Promise<Fi
     .filter((t) => t.transaction_type === "despesa" && t.status !== "cancelado")
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
+  const totalProLabore = items
+    .filter((t) => t.transaction_type === "despesa" && t.category === "Pro-Labore" && t.status !== "cancelado")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const totalDespesasOperacionais = totalDespesas - totalProLabore;
+
   const receitasPendentes = items
     .filter((t) => t.transaction_type === "receita" && t.status === "pendente")
     .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -98,6 +106,8 @@ export async function getFinancialSummary(filters: FinancialFilters): Promise<Fi
   return {
     totalReceitas,
     totalDespesas,
+    totalDespesasOperacionais,
+    totalProLabore,
     saldo: totalReceitas - totalDespesas,
     receitasPendentes,
     despesasPendentes,

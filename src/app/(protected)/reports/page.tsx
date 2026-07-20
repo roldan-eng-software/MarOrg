@@ -171,9 +171,10 @@ export default function ReportsPage() {
 
       {!loading && activeTab === "revenue" && revenueData && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <StatCard label="Receita Total" value={formatCurrency(revenueData.totalRevenue)} />
-            <StatCard label="Despesas Total" value={formatCurrency(revenueData.totalExpenses)} />
+            <StatCard label="Despesas Operacionais" value={formatCurrency(revenueData.totalExpensesOperational)} />
+            <StatCard label="Pró-Labore" value={formatCurrency(revenueData.totalProLabore)} />
             <StatCard label="Saldo" value={formatCurrency(revenueData.balance)}
               subtitle={revenueData.balance >= 0 ? "Positivo" : "Negativo"} />
             <StatCard label="Transações Pagas" value={String(revenueData.paidCount)} />

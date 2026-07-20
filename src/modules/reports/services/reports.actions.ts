@@ -11,6 +11,8 @@ export interface RevenueReport {
   period: string;
   totalRevenue: number;
   totalExpenses: number;
+  totalExpensesOperational: number;
+  totalProLabore: number;
   balance: number;
   paidCount: number;
   averageTransaction: number;
@@ -122,6 +124,10 @@ export async function getRevenueReport(filters: ReportFilters): Promise<RevenueR
   const totalExpenses = paidItems
     .filter((i) => i.transaction_type === "despesa")
     .reduce((sum, i) => sum + i.amount, 0);
+  const totalProLabore = paidItems
+    .filter((i) => i.transaction_type === "despesa" && i.category === "Pro-Labore")
+    .reduce((sum, i) => sum + i.amount, 0);
+  const totalExpensesOperational = totalExpenses - totalProLabore;
   const balance = totalRevenue - totalExpenses;
   const paidCount = paidItems.length;
   const averageTransaction = paidCount > 0 ? (totalRevenue + totalExpenses) / paidCount : 0;
@@ -132,6 +138,8 @@ export async function getRevenueReport(filters: ReportFilters): Promise<RevenueR
       : "Todos os períodos",
     totalRevenue,
     totalExpenses,
+    totalExpensesOperational,
+    totalProLabore,
     balance,
     paidCount,
     averageTransaction,

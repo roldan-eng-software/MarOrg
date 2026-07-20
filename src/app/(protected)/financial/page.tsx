@@ -31,6 +31,7 @@ const categories = [
   "Marketing",
   "Impostos",
   "Manutenção",
+  "Pró-Labore",
   "Outros",
 ];
 
@@ -223,7 +224,7 @@ export default function FinancialPage() {
 
       {/* Summary */}
       {summary && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-[#8B7A6B]">Receitas</p>
@@ -232,13 +233,19 @@ export default function FinancialPage() {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-[#8B7A6B]">Despesas</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(summary.totalDespesas)}</p>
+              <p className="text-xs text-[#8B7A6B]">Despesas Operacionais</p>
+              <p className="text-xl font-bold text-red-600">{formatCurrency(summary.totalDespesasOperacionais)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-[#8B7A6B]">Saldo</p>
+              <p className="text-xs text-[#8B7A6B]">Pró-Labore</p>
+              <p className="text-xl font-bold text-purple-600">{formatCurrency(summary.totalProLabore)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-[#8B7A6B]">Saldo Líquido</p>
               <p className={`text-xl font-bold ${summary.saldo >= 0 ? "text-green-600" : "text-red-600"}`}>
                 {formatCurrency(summary.saldo)}
               </p>
@@ -300,7 +307,15 @@ export default function FinancialPage() {
                           <p className="text-xs text-[#8B7A6B]">{t.suppliers.name}</p>
                         )}
                       </td>
-                      <td className="py-3 text-[#8B7A6B] hidden sm:table-cell">{t.category}</td>
+                      <td className="py-3 text-[#8B7A6B] hidden sm:table-cell">
+                        {t.category === "Pró-Labore" ? (
+                          <span className="inline-flex items-center rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                            Pró-Labore
+                          </span>
+                        ) : (
+                          t.category
+                        )}
+                      </td>
                       <td className="py-3 text-[#8B7A6B] hidden md:table-cell">
                         {formatDate(t.due_date)}
                         {t.paid_date && (
