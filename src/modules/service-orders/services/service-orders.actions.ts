@@ -428,7 +428,8 @@ export async function hasFinancialTransactions(osId: string): Promise<boolean> {
   const { count } = await supabase
     .from("financial_transactions")
     .select("*", { count: "exact", head: true })
-    .eq("service_order_id", osId);
+    .eq("service_order_id", osId)
+    .eq("transaction_type", "receita");
   return (count ?? 0) > 0;
 }
 
