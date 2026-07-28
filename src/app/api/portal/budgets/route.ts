@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("budgets")
     .select("*, customers(full_name, phone), budget_items(*)")
-    .in("status", ["enviado", "em_analise", "aprovado"])
+    .in("status", ["em_analise", "aprovado", "recusado", "vencido", "revisado"])
     .order("created_at", { ascending: false });
 
   if (sanitizedBudgetNumber) {
