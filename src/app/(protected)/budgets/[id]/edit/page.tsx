@@ -218,16 +218,16 @@ export default function BudgetEditPage() {
 
   let balance = remaining;
   const installmentDetails = (watch("payment_installments") || []).map((inst: { installment: number; description: string; due_date: string; percentage: number; payment_type?: string }, i: number) => {
-    const pType = inst.payment_type || "";
-    if (!pType || (i === 0 && (depositPercentage ?? 0) > 0 && inst.description === "Sinal de Entrada")) {
-      return { ...inst, payment_type: pType, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0, amortization: totalAmount * inst.percentage / 100 };
+    const effectiveType = installmentPaymentTypes[i] || inst.payment_type || "";
+    if (!effectiveType || (i === 0 && (depositPercentage ?? 0) > 0 && inst.description === "Sinal de Entrada")) {
+      return { ...inst, payment_type: effectiveType, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0, amortization: totalAmount * inst.percentage / 100 };
     }
-    const instRate = getRateForType(pType);
+    const instRate = getRateForType(effectiveType);
     const instR = instRate / 100;
     const interest = balance * instR;
     const amortization = pmt - interest;
     balance -= amortization;
-    return { ...inst, payment_type: pType, baseValue: amortization, rate: instRate, withInterest: pmt, interestAmount: interest, amortization };
+    return { ...inst, payment_type: effectiveType, baseValue: amortization, rate: instRate, withInterest: pmt, interestAmount: interest, amortization };
   });
 
   const totalOriginal = totalAmount;

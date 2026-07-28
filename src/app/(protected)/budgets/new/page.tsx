@@ -138,15 +138,16 @@ export default function BudgetNewPage() {
 
   let balance = remaining;
   const installmentDetails = (watch("payment_installments") || []).map((inst, i) => {
-    if (!inst.payment_type || (i === 0 && (depositPercentage ?? 0) > 0)) {
-      return { ...inst, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0, amortization: totalAmount * inst.percentage / 100 };
+    const effectiveType = installmentPaymentTypes[i] || inst.payment_type || "";
+    if (!effectiveType || (i === 0 && (depositPercentage ?? 0) > 0)) {
+      return { ...inst, payment_type: effectiveType, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0, amortization: totalAmount * inst.percentage / 100 };
     }
-    const instRate = getRateForType(inst.payment_type);
+    const instRate = getRateForType(effectiveType);
     const instR = instRate / 100;
     const interest = balance * instR;
     const amortization = pmt - interest;
     balance -= amortization;
-    return { ...inst, baseValue: amortization, rate: instRate, withInterest: pmt, interestAmount: interest, amortization };
+    return { ...inst, payment_type: effectiveType, baseValue: amortization, rate: instRate, withInterest: pmt, interestAmount: interest, amortization };
   });
 
   const totalOriginal = totalAmount;
