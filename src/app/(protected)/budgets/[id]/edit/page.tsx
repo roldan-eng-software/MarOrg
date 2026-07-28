@@ -15,6 +15,7 @@ import {
   updateBudgetStatus,
 } from "@/modules/budgets/services/budgets.actions";
 import { listCustomersServer } from "@/modules/customers/services/customers.actions";
+import { listCosts, getBudgetCosts } from "@/modules/costs/services/costs.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -26,12 +27,20 @@ import { formatCurrency } from "@/lib/utils/format";
 import { FurnitureSelect } from "@/components/furniture-select";
 import { MaterialPicker } from "@/components/material-picker";
 import { createServiceOrderFromBudget } from "@/modules/service-orders/services/service-orders.actions";
-import type { Customer, BudgetItem, FurnitureTemplate, Material } from "@/types";
+import type { Customer, BudgetItem, FurnitureTemplate, Material, Cost } from "@/types";
 
 interface ItemMaterial {
   materialId: string;
   name: string;
   unitCost: number;
+  quantity: number;
+}
+
+interface BudgetCostForm {
+  costId: string | null;
+  name: string;
+  costType: string | null;
+  value: number;
   quantity: number;
 }
 
@@ -67,7 +76,8 @@ export default function BudgetEditPage() {
   const [budgetStatus, setBudgetStatus] = useState<string>("");
   const [itemMaterials, setItemMaterials] = useState<Record<number, ItemMaterial[]>>({});
   const [manualRawCost, setManualRawCost] = useState<number | null>(null);
-  const [overheadCost, setOverheadCost] = useState(0);
+  const [budgetCosts, setBudgetCosts] = useState<BudgetCostForm[]>([]);
+  const [availableCosts, setAvailableCosts] = useState<Cost[]>([]);
   const [profitMargin, setProfitMargin] = useState(0);
 
   const {
@@ -96,11 +106,13 @@ export default function BudgetEditPage() {
       getBudget(params.id as string),
       listCustomersServer(),
       getBudgetItemMaterials(params.id as string),
-    ]).then(([budget, customerList, materialsMap]) => {
+      listCosts(true),
+      getBudgetCosts(params.id as string),
+    ]).then(([budget, customerList, materialsMap, costs, savedBudgetCosts]) => {
       setBudgetStatus(budget.status);
       setCustomers(customerList);
-      setOverheadCost(Number(budget.overhead_cost ?? 0));
       setProfitMargin(Number(budget.profit_margin ?? 0));
+      setAvailableCosts(costs);
       reset({
         customer_id: budget.customer_id,
         validity_days: budget.validity_days,
@@ -143,6 +155,15 @@ export default function BudgetEditPage() {
         }
       });
       setItemMaterials(loadedMaterials);
+
+      const loadedBudgetCosts: BudgetCostForm[] = savedBudgetCosts.map((c) => ({
+        costId: c.cost_id,
+        name: c.name,
+        costType: c.cost_type,
+        value: Number(c.value),
+        quantity: Number(c.quantity),
+      }));
+      setBudgetCosts(loadedBudgetCosts);
     }).catch(() => {
       showToast("Erro ao carregar orçamento", "error");
     }).finally(() => setFetching(false));
@@ -199,6 +220,7 @@ export default function BudgetEditPage() {
 
   const computedRawCost = (items ?? []).reduce((sum, _item, i) => sum + getItemMaterialsCost(i), 0);
 
+  const overheadCost = budgetCosts.reduce((sum, c) => sum + c.value * c.quantity, 0);
   const rawMaterialCost = manualRawCost !== null ? manualRawCost : computedRawCost;
   const totalCost = rawMaterialCost + overheadCost;
   const suggestedTotal = totalCost * (1 + profitMargin / 100);
@@ -288,6 +310,42 @@ export default function BudgetEditPage() {
     return payload;
   }
 
+  function addCostFromTemplate(cost: Cost) {
+    setBudgetCosts((prev) => [
+      ...prev,
+      {
+        costId: cost.id,
+        name: cost.name,
+        costType: cost.cost_type,
+        value: Number(cost.default_value),
+        quantity: 1,
+      },
+    ]);
+  }
+
+  function addFreeCost() {
+    setBudgetCosts((prev) => [
+      ...prev,
+      {
+        costId: null,
+        name: "Outro custo",
+        costType: "variavel",
+        value: 0,
+        quantity: 1,
+      },
+    ]);
+  }
+
+  function removeBudgetCost(index: number) {
+    setBudgetCosts((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateBudgetCostField(index: number, field: keyof BudgetCostForm, value: string | number) {
+    setBudgetCosts((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
+  }
+
   async function onSubmit(data: BudgetFormData) {
     try {
       setLoading(true);
@@ -325,7 +383,14 @@ export default function BudgetEditPage() {
           notes: item.notes || null,
           sort_order: i,
         })),
-        buildMaterialsPayload()
+        buildMaterialsPayload(),
+        budgetCosts.map((c) => ({
+          cost_id: c.costId,
+          name: c.name,
+          cost_type: c.costType,
+          value: c.value,
+          quantity: c.quantity,
+        }))
       );
       showToast("Orçamento atualizado com sucesso", "success");
     } catch {
@@ -649,6 +714,110 @@ export default function BudgetEditPage() {
           </CardContent>
         </Card>
 
+        {/* Custos do Orçamento */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Custos do Orçamento</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[#8B7A6B]">
+              Selecione os custos fixos/variáveis que se aplicam a este orçamento.
+            </p>
+
+            {budgetCosts.length > 0 && (
+              <div className="space-y-2">
+                {budgetCosts.map((cost, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 rounded bg-[#F5F0EB] border border-[#D4C4B0] px-3 py-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={cost.name}
+                        onChange={(e) => updateBudgetCostField(i, "name", e.target.value)}
+                        disabled={!canEdit}
+                        className="w-full bg-transparent text-sm font-medium text-[#3D2519] border-none outline-none"
+                        placeholder="Nome do custo"
+                      />
+                    </div>
+                    <Badge variant={cost.costType === "fixo" ? "default" : "info"} className="text-[10px]">
+                      {cost.costType === "fixo" ? "Fixo" : "Variável"}
+                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={cost.quantity}
+                        onChange={(e) => updateBudgetCostField(i, "quantity", Number(e.target.value))}
+                        disabled={!canEdit}
+                        className="w-14 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-center"
+                      />
+                      <span className="text-xs text-[#8B7A6B]">x</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={cost.value}
+                        onChange={(e) => updateBudgetCostField(i, "value", Number(e.target.value))}
+                        disabled={!canEdit}
+                        className="w-20 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-right"
+                      />
+                      <span className="text-xs font-semibold text-[#3D2519] w-16 text-right">
+                        {formatCurrency(cost.value * cost.quantity)}
+                      </span>
+                    </div>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => removeBudgetCost(i)}
+                        className="text-red-400 hover:text-red-600 text-xs font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {canEdit && (
+              <div className="flex flex-wrap gap-2">
+                {availableCosts
+                  .filter((ac) => !budgetCosts.some((bc) => bc.costId === ac.id))
+                  .map((cost) => (
+                    <Button
+                      key={cost.id}
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => addCostFromTemplate(cost)}
+                    >
+                      + {cost.name}
+                    </Button>
+                  ))
+                }
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={addFreeCost}
+                >
+                  + Outro custo
+                </Button>
+              </div>
+            )}
+
+            {budgetCosts.length > 0 && (
+              <div className="flex justify-between text-sm font-semibold text-[#3D2519] pt-2 border-t border-[#D4C4B0]">
+                <span>Total Custos</span>
+                <span>{formatCurrency(overheadCost)}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Margem e Custos */}
         <Card>
           <CardHeader>
@@ -691,15 +860,12 @@ export default function BudgetEditPage() {
               />
             )}
 
-            <Input
-              id="overhead_cost"
-              label="Custos Fixos / Variáveis (frete, mão de obra, insumos)"
-              type="number"
-              step="0.01"
-              value={overheadCost}
-              onChange={(e) => setOverheadCost(Number(e.target.value))}
-              disabled={!canEdit}
-            />
+            <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8B7A6B]">Custos Fixos / Variáveis</span>
+                <span className="font-semibold text-[#3D2519]">{formatCurrency(overheadCost)}</span>
+              </div>
+            </div>
 
             <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-3">
               <div className="flex justify-between text-sm">

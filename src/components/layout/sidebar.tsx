@@ -16,6 +16,7 @@ const navItems = [
   { href: "/inventory", label: "Estoque", icon: "📦" },
   { href: "/suppliers", label: "Fornecedores", icon: "🏭" },
   { href: "/financial", label: "Fluxo de Caixa", icon: "💰" },
+  { href: "/costs", label: "Custos", icon: "📑" },
   { href: "/reports", label: "Relatórios", icon: "📈" },
   { href: "/furniture-templates", label: "Modelos de Móveis", icon: "🪑" },
   { href: "/portal", label: "Portal do Cliente", icon: "🌐" },

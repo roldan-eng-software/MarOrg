@@ -257,6 +257,28 @@ export interface BudgetItemMaterial {
   created_at: string;
 }
 
+export interface Cost {
+  id: string;
+  name: string;
+  description: string | null;
+  cost_type: "fixo" | "variavel";
+  default_value: number;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface BudgetCost {
+  id: string;
+  budget_id: string;
+  cost_id: string | null;
+  name: string;
+  cost_type: string | null;
+  value: number;
+  quantity: number;
+  created_at: string;
+}
+
 export interface Supplier {
   id: string;
   name: string;

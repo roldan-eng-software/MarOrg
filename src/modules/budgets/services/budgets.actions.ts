@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Budget, BudgetItem, BudgetItemMaterial } from "@/types";
+import type { Budget, BudgetItem, BudgetItemMaterial, BudgetCost } from "@/types";
 
 export async function generateBudgetNumber(): Promise<string> {
   const supabase = createAdminClient();
@@ -123,7 +123,8 @@ export async function createBudget(
     installment_count?: number;
   },
   items: Omit<BudgetItem, "id" | "created_at" | "budget_id">[],
-  materials?: Record<number, { material_id: string; quantity: number; unit_cost: number }[]>
+  materials?: Record<number, { material_id: string; quantity: number; unit_cost: number }[]>,
+  budgetCosts?: Omit<BudgetCost, "id" | "budget_id" | "created_at">[]
 ) {
   const supabase = await createClient();
 
@@ -195,6 +196,18 @@ export async function createBudget(
     }
   }
 
+  if (budgetCosts && budgetCosts.length > 0) {
+    const { error: costsError } = await supabase.from("budget_costs").insert(
+      budgetCosts.map((c) => ({
+        ...c,
+        budget_id: newBudget.id,
+      }))
+    );
+    if (costsError) {
+      console.error("Error creating budget costs:", costsError.message);
+    }
+  }
+
   return newBudget as Budget;
 }
 
@@ -208,7 +221,8 @@ export async function updateBudget(
     installment_count?: number;
   },
   items?: (Omit<BudgetItem, "id" | "created_at" | "budget_id"> & { id?: string })[],
-  materials?: Record<number, { material_id: string; quantity: number; unit_cost: number }[]>
+  materials?: Record<number, { material_id: string; quantity: number; unit_cost: number }[]>,
+  budgetCosts?: Omit<BudgetCost, "id" | "budget_id" | "created_at">[]
 ) {
   const supabase = await createClient();
 
@@ -277,6 +291,22 @@ export async function updateBudget(
         if (materialRows.length > 0) {
           await supabase.from("budget_item_materials").insert(materialRows);
         }
+      }
+    }
+  }
+
+  if (budgetCosts) {
+    await supabase.from("budget_costs").delete().eq("budget_id", id);
+
+    if (budgetCosts.length > 0) {
+      const { error: costsError } = await supabase.from("budget_costs").insert(
+        budgetCosts.map((c) => ({
+          ...c,
+          budget_id: id,
+        }))
+      );
+      if (costsError) {
+        console.error("Error updating budget costs:", costsError.message);
       }
     }
   }

@@ -10,7 +10,9 @@ import {
 } from "@/lib/validations/budget";
 import { createBudget } from "@/modules/budgets/services/budgets.actions";
 import { listCustomersServer } from "@/modules/customers/services/customers.actions";
+import { listCosts } from "@/modules/costs/services/costs.actions";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,12 +21,20 @@ import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { FurnitureSelect } from "@/components/furniture-select";
 import { MaterialPicker } from "@/components/material-picker";
-import type { Customer, FurnitureTemplate, Material } from "@/types";
+import type { Customer, FurnitureTemplate, Material, Cost } from "@/types";
 
 interface ItemMaterial {
   materialId: string;
   name: string;
   unitCost: number;
+  quantity: number;
+}
+
+interface BudgetCostForm {
+  costId: string | null;
+  name: string;
+  costType: string | null;
+  value: number;
   quantity: number;
 }
 
@@ -34,7 +44,8 @@ export default function BudgetNewPage() {
   const [loading, setLoading] = useState(false);
   const [itemMaterials, setItemMaterials] = useState<Record<number, ItemMaterial[]>>({});
   const [manualRawCost, setManualRawCost] = useState<number | null>(null);
-  const [overheadCost, setOverheadCost] = useState(0);
+  const [budgetCosts, setBudgetCosts] = useState<BudgetCostForm[]>([]);
+  const [availableCosts, setAvailableCosts] = useState<Cost[]>([]);
   const [profitMargin, setProfitMargin] = useState(0);
 
   const {
@@ -85,6 +96,9 @@ export default function BudgetNewPage() {
     listCustomersServer()
       .then(setCustomers)
       .catch(() => setCustomers([]));
+    listCosts(true)
+      .then(setAvailableCosts)
+      .catch(() => setAvailableCosts([]));
   }, []);
 
   const totalAmount = items.reduce((sum, item) => {
@@ -135,6 +149,7 @@ export default function BudgetNewPage() {
 
   const computedRawCost = (items ?? []).reduce((sum, _item, i) => sum + getItemMaterialsCost(i), 0);
 
+  const overheadCost = budgetCosts.reduce((sum, c) => sum + c.value * c.quantity, 0);
   const rawMaterialCost = manualRawCost !== null ? manualRawCost : computedRawCost;
   const totalCost = rawMaterialCost + overheadCost;
   const suggestedTotal = totalCost * (1 + profitMargin / 100);
@@ -224,6 +239,42 @@ export default function BudgetNewPage() {
     return payload;
   }
 
+  function addCostFromTemplate(cost: Cost) {
+    setBudgetCosts((prev) => [
+      ...prev,
+      {
+        costId: cost.id,
+        name: cost.name,
+        costType: cost.cost_type,
+        value: Number(cost.default_value),
+        quantity: 1,
+      },
+    ]);
+  }
+
+  function addFreeCost() {
+    setBudgetCosts((prev) => [
+      ...prev,
+      {
+        costId: null,
+        name: "Outro custo",
+        costType: "variavel",
+        value: 0,
+        quantity: 1,
+      },
+    ]);
+  }
+
+  function removeBudgetCost(index: number) {
+    setBudgetCosts((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateBudgetCost(index: number, field: keyof BudgetCostForm, value: string | number) {
+    setBudgetCosts((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
+  }
+
   async function onSubmit(data: BudgetFormData) {
     try {
       setLoading(true);
@@ -262,7 +313,14 @@ export default function BudgetNewPage() {
           notes: item.notes || null,
           sort_order: i,
         })),
-        buildMaterialsPayload()
+        buildMaterialsPayload(),
+        budgetCosts.map((c) => ({
+          cost_id: c.costId,
+          name: c.name,
+          cost_type: c.costType,
+          value: c.value,
+          quantity: c.quantity,
+        }))
       );
       showToast("Orçamento criado com sucesso", "success");
       router.push("/budgets");
@@ -529,6 +587,103 @@ export default function BudgetNewPage() {
           </CardContent>
         </Card>
 
+        {/* Custos do Orçamento */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Custos do Orçamento</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[#8B7A6B]">
+              Selecione os custos fixos/variáveis que se aplicam a este orçamento.
+            </p>
+
+            {budgetCosts.length > 0 && (
+              <div className="space-y-2">
+                {budgetCosts.map((cost, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 rounded bg-[#F5F0EB] border border-[#D4C4B0] px-3 py-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={cost.name}
+                        onChange={(e) => updateBudgetCost(i, "name", e.target.value)}
+                        className="w-full bg-transparent text-sm font-medium text-[#3D2519] border-none outline-none"
+                        placeholder="Nome do custo"
+                      />
+                    </div>
+                    <Badge variant={cost.costType === "fixo" ? "default" : "info"} className="text-[10px]">
+                      {cost.costType === "fixo" ? "Fixo" : "Variável"}
+                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={cost.quantity}
+                        onChange={(e) => updateBudgetCost(i, "quantity", Number(e.target.value))}
+                        className="w-14 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-center"
+                      />
+                      <span className="text-xs text-[#8B7A6B]">x</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={cost.value}
+                        onChange={(e) => updateBudgetCost(i, "value", Number(e.target.value))}
+                        className="w-20 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-right"
+                      />
+                      <span className="text-xs font-semibold text-[#3D2519] w-16 text-right">
+                        {formatCurrency(cost.value * cost.quantity)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeBudgetCost(i)}
+                      className="text-red-400 hover:text-red-600 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {availableCosts
+                .filter((ac) => !budgetCosts.some((bc) => bc.costId === ac.id))
+                .map((cost) => (
+                  <Button
+                    key={cost.id}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => addCostFromTemplate(cost)}
+                  >
+                    + {cost.name}
+                  </Button>
+                ))
+              }
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={addFreeCost}
+              >
+                + Outro custo
+              </Button>
+            </div>
+
+            {budgetCosts.length > 0 && (
+              <div className="flex justify-between text-sm font-semibold text-[#3D2519] pt-2 border-t border-[#D4C4B0]">
+                <span>Total Custos</span>
+                <span>{formatCurrency(overheadCost)}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Margem e Custos */}
         <Card>
           <CardHeader>
@@ -569,14 +724,12 @@ export default function BudgetNewPage() {
               />
             )}
 
-            <Input
-              id="overhead_cost"
-              label="Custos Fixos / Variáveis (frete, mão de obra, insumos)"
-              type="number"
-              step="0.01"
-              value={overheadCost}
-              onChange={(e) => setOverheadCost(Number(e.target.value))}
-            />
+            <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8B7A6B]">Custos Fixos / Variáveis</span>
+                <span className="font-semibold text-[#3D2519]">{formatCurrency(overheadCost)}</span>
+              </div>
+            </div>
 
             <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-3">
               <div className="flex justify-between text-sm">
