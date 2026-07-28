@@ -65,6 +65,9 @@ export interface Budget {
   payment_types: string[];
   deposit_percentage: number | null;
   installment_count: number | null;
+  raw_material_cost: number;
+  overhead_cost: number;
+  profit_margin: number;
 }
 
 export interface BudgetItem {

@@ -38,6 +38,9 @@ export const budgetSchema = z.object({
   payment_types: z.array(z.string()).default([]),
   deposit_percentage: z.coerce.number().min(0).max(100).default(0),
   installment_count: z.coerce.number().min(1).max(48).default(1),
+  raw_material_cost: z.coerce.number().min(0).default(0),
+  overhead_cost: z.coerce.number().min(0).default(0),
+  profit_margin: z.coerce.number().min(0).max(999).default(0),
   items: z
     .array(budgetItemSchema)
     .min(1, "Adicione pelo menos um item ao orçamento"),

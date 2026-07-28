@@ -374,6 +374,41 @@ export default function BudgetViewPage() {
         </CardContent>
       </Card>
 
+      {/* Margem e Custos - só visualização */}
+      {(budget.raw_material_cost > 0 || budget.overhead_cost > 0 || budget.profit_margin > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Margem e Custos (interno)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-[#8B7A6B]">Custo Matéria-Prima</span>
+              <span className="font-medium text-[#3D2519]">{formatCurrency(budget.raw_material_cost)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-[#8B7A6B]">Custos Fixos / Variáveis</span>
+              <span className="font-medium text-[#3D2519]">{formatCurrency(budget.overhead_cost)}</span>
+            </div>
+            <div className="border-t border-[#D4C4B0] pt-2 flex justify-between text-sm">
+              <span className="text-[#8B7A6B]">Custo Total</span>
+              <span className="font-semibold text-[#3D2519]">{formatCurrency(budget.raw_material_cost + budget.overhead_cost)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-[#8B7A6B]">Margem de Lucro</span>
+              <span className="font-medium text-[#3D2519]">{budget.profit_margin}%</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-[#8B7A6B]">Preço Sugerido</span>
+              <span className="font-semibold text-[#3D2519]">{formatCurrency((budget.raw_material_cost + budget.overhead_cost) * (1 + budget.profit_margin / 100))}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-[#8B7A6B]">Lucro Estimado</span>
+              <span className="font-semibold text-green-700">{formatCurrency((budget.raw_material_cost + budget.overhead_cost) * (budget.profit_margin / 100))}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Back */}
       <div className="flex justify-center">
         <Button variant="ghost" onClick={() => router.back()}>

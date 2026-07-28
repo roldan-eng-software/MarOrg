@@ -58,6 +58,10 @@ export default function BudgetEditPage() {
   const [fetching, setFetching] = useState(true);
   const [budgetStatus, setBudgetStatus] = useState<string>("");
   const [materialSelections, setMaterialSelections] = useState<Record<number, string | null>>({});
+  const [materialCosts, setMaterialCosts] = useState<Record<string, number>>({});
+  const [manualRawCost, setManualRawCost] = useState<number | null>(null);
+  const [overheadCost, setOverheadCost] = useState(0);
+  const [profitMargin, setProfitMargin] = useState(0);
 
   const {
     register,
@@ -87,6 +91,8 @@ export default function BudgetEditPage() {
     ]).then(([budget, customerList]) => {
       setBudgetStatus(budget.status);
       setCustomers(customerList);
+      setOverheadCost(Number(budget.overhead_cost ?? 0));
+      setProfitMargin(Number(budget.profit_margin ?? 0));
       reset({
         customer_id: budget.customer_id,
         validity_days: budget.validity_days,
@@ -169,6 +175,49 @@ export default function BudgetEditPage() {
     setValue("payment_installments", newInstallments);
   }, [depositPercentage, installmentCount, canEdit, setValue]);
 
+  const computedRawCost = (items ?? []).reduce((sum, item, i) => {
+    const mid = materialSelections[i];
+    if (!mid) return sum;
+    const cost = materialCosts[mid] ?? 0;
+    return sum + cost * (item.quantity || 0);
+  }, 0);
+
+  const rawMaterialCost = manualRawCost !== null ? manualRawCost : computedRawCost;
+  const totalCost = rawMaterialCost + overheadCost;
+  const suggestedTotal = totalCost * (1 + profitMargin / 100);
+  const estimatedProfit = suggestedTotal - totalCost;
+
+  function applySuggestedPrice() {
+    if (totalCost <= 0 || profitMargin <= 0) {
+      showToast("Defina os custos e a margem antes de aplicar", "error");
+      return;
+    }
+
+    const itemsWithCost: { index: number; costTotal: number }[] = [];
+    for (let i = 0; i < (items ?? []).length; i++) {
+      const mid = materialSelections[i];
+      if (!mid) continue;
+      const cost = materialCosts[mid] ?? 0;
+      itemsWithCost.push({ index: i, costTotal: cost * ((items?.[i]?.quantity ?? 0) || 0) });
+    }
+
+    if (itemsWithCost.length === 0) {
+      showToast("Selecione materiais nos itens para aplicar o preço sugerido", "error");
+      return;
+    }
+
+    const totalRawCost = itemsWithCost.reduce((s, ic) => s + ic.costTotal, 0);
+
+    for (const { index, costTotal } of itemsWithCost) {
+      const share = totalRawCost > 0 ? costTotal / totalRawCost : 1 / itemsWithCost.length;
+      const contribution = suggestedTotal * share;
+      const unitPrice = contribution / ((items?.[index]?.quantity ?? 0) || 1);
+      setValue(`items.${index}.unit_price`, Math.round(unitPrice * 100) / 100);
+    }
+
+    showToast("Preço sugerido aplicado aos itens", "success");
+  }
+
   async function onSubmit(data: BudgetFormData) {
     try {
       setLoading(true);
@@ -185,6 +234,9 @@ export default function BudgetEditPage() {
           payment_types: data.payment_types || [],
           deposit_percentage: data.deposit_percentage ?? 0,
           installment_count: data.installment_count ?? 1,
+          raw_material_cost: rawMaterialCost,
+          overhead_cost: overheadCost,
+          profit_margin: profitMargin,
         },
         data.items.map((item, i) => ({
           item_type: item.item_type,
@@ -384,11 +436,20 @@ export default function BudgetEditPage() {
                     onChange={(val) => setValue(`items.${index}.material`, val)}
                     onMaterialSelect={(mat) => {
                       setMaterialSelections((prev) => ({ ...prev, [index]: mat.id }));
+                      setMaterialCosts((prev) => ({ ...prev, [mat.id]: Number(mat.cost) }));
                       if (mat.cost > 0) setValue(`items.${index}.unit_price`, Number(mat.cost));
                       if (mat.unit) setValue(`items.${index}.unit`, mat.unit);
                     }}
                     onClear={() => {
-                      setMaterialSelections((prev) => ({ ...prev, [index]: null }));
+                      const prev = materialSelections[index];
+                      setMaterialSelections((prev2) => ({ ...prev2, [index]: null }));
+                      if (prev) {
+                        setMaterialCosts((prev2) => {
+                          const next = { ...prev2 };
+                          delete next[prev];
+                          return next;
+                        });
+                      }
                     }}
                     disabled={!canEdit}
                   />
@@ -454,6 +515,101 @@ export default function BudgetEditPage() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Margem e Custos */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Margem e Custos (interno)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-[#8B7A6B]">Custo Matéria-Prima</p>
+                <p className="text-lg font-semibold text-[#3D2519]">
+                  {formatCurrency(rawMaterialCost)}
+                </p>
+              </div>
+              {canEdit && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (manualRawCost !== null) {
+                      setManualRawCost(null);
+                    } else {
+                      setManualRawCost(computedRawCost);
+                    }
+                  }}
+                >
+                  {manualRawCost !== null ? "Auto" : "Editar"}
+                </Button>
+              )}
+            </div>
+
+            {manualRawCost !== null && canEdit && (
+              <Input
+                id="manual_raw_cost"
+                label="Custo Matéria-Prima (manual)"
+                type="number"
+                step="0.01"
+                value={manualRawCost}
+                onChange={(e) => setManualRawCost(Number(e.target.value))}
+              />
+            )}
+
+            <Input
+              id="overhead_cost"
+              label="Custos Fixos / Variáveis (frete, mão de obra, insumos)"
+              type="number"
+              step="0.01"
+              value={overheadCost}
+              onChange={(e) => setOverheadCost(Number(e.target.value))}
+              disabled={!canEdit}
+            />
+
+            <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8B7A6B]">Custo Total</span>
+                <span className="font-semibold text-[#3D2519]">{formatCurrency(totalCost)}</span>
+              </div>
+            </div>
+
+            <Input
+              id="profit_margin"
+              label="Margem de Lucro (%)"
+              type="number"
+              step="0.1"
+              value={profitMargin}
+              onChange={(e) => setProfitMargin(Number(e.target.value))}
+              disabled={!canEdit}
+            />
+
+            <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-3 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8B7A6B]">Preço Sugerido</span>
+                <span className="font-semibold text-[#3D2519]">{formatCurrency(suggestedTotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8B7A6B]">Lucro Estimado</span>
+                <span className="font-semibold text-green-700">
+                  {formatCurrency(estimatedProfit)} ({profitMargin}%)
+                </span>
+              </div>
+            </div>
+
+            {canEdit && (
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full"
+                onClick={applySuggestedPrice}
+              >
+                Aplicar Preço Sugerido
+              </Button>
+            )}
           </CardContent>
         </Card>
 
