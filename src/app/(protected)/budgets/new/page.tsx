@@ -133,8 +133,12 @@ export default function BudgetNewPage() {
   }
 
   const firstInstType = (watch("payment_installments") || [])[0]?.payment_type || paymentTypes[0] || "";
-  const effectiveRate = getRateForType(firstInstType);
-  const pmt = count > 0 ? calculatePMT(remaining, effectiveRate, count) : remaining;
+  const rates = Array.from({ length: count }, (_, i) => {
+    const type = installmentPaymentTypes[i] || firstInstType || "";
+    return getRateForType(type);
+  });
+  const avgRate = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+  const pmt = count > 0 ? calculatePMT(remaining, avgRate, count) : remaining;
 
   let balance = remaining;
   const installmentDetails = (watch("payment_installments") || []).map((inst, i) => {
