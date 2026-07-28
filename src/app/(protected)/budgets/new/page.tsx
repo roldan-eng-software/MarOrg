@@ -119,27 +119,39 @@ export default function BudgetNewPage() {
   const remaining = totalAmount - depositValue;
   const count = installmentCount ?? 1;
   const installmentValue = count > 0 ? remaining / count : remaining;
+  const paymentTypes = watch("payment_types") || [];
 
   function getRateForType(type: string): number {
     const found = interestRates.find((r) => r.payment_type === type);
     return found ? Number(found.monthly_rate) : 0;
   }
 
+  function calculatePMT(pv: number, ratePercent: number, n: number): number {
+    const r = ratePercent / 100;
+    if (r === 0) return pv / n;
+    return pv * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  }
+
+  const firstInstType = (watch("payment_installments") || [])[0]?.payment_type || paymentTypes[0] || "";
+  const effectiveRate = getRateForType(firstInstType);
+  const pmt = count > 0 ? calculatePMT(remaining, effectiveRate, count) : remaining;
+
+  let balance = remaining;
   const installmentDetails = (watch("payment_installments") || []).map((inst, i) => {
-    if (!inst.payment_type || i === 0 && (depositPercentage ?? 0) > 0) {
-      return { ...inst, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0 };
+    if (!inst.payment_type || (i === 0 && (depositPercentage ?? 0) > 0)) {
+      return { ...inst, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0, amortization: totalAmount * inst.percentage / 100 };
     }
-    const base = totalAmount * inst.percentage / 100;
-    const rate = getRateForType(inst.payment_type);
-    const withInterest = base * (1 + rate / 100);
-    return { ...inst, baseValue: base, rate, withInterest, interestAmount: withInterest - base };
+    const instRate = getRateForType(inst.payment_type);
+    const instR = instRate / 100;
+    const interest = balance * instR;
+    const amortization = pmt - interest;
+    balance -= amortization;
+    return { ...inst, baseValue: amortization, rate: instRate, withInterest: pmt, interestAmount: interest, amortization };
   });
 
   const totalOriginal = totalAmount;
   const totalWithInterest = installmentDetails.reduce((sum, d) => sum + d.withInterest, 0);
   const totalInterest = totalWithInterest - totalOriginal;
-
-  const paymentTypes = watch("payment_types") || [];
 
   useEffect(() => {
     const pct = depositPercentage ?? 0;
@@ -975,10 +987,10 @@ export default function BudgetNewPage() {
                       {" "}
                       {d.rate > 0 ? (
                         <>
-                          <span className="text-[#8B7A6B]">{formatCurrency(d.baseValue)}</span>
-                          {" + "}
-                          <span className="text-orange-600">{d.rate}%</span>
-                          {" = "}
+                          <span className="text-[#8B7A6B]">{formatCurrency(d.amortization ?? d.baseValue)}</span>
+                          {" amort. + "}
+                          <span className="text-orange-600">{formatCurrency(d.interestAmount)}</span>
+                          {" juros = "}
                           <span className="font-semibold text-[#3D2519]">{formatCurrency(d.withInterest)}</span>
                         </>
                       ) : (

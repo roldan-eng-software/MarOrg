@@ -206,15 +206,28 @@ export default function BudgetEditPage() {
     return found ? Number(found.monthly_rate) : 0;
   }
 
+  function calculatePMT(pv: number, ratePercent: number, n: number): number {
+    const r = ratePercent / 100;
+    if (r === 0) return pv / n;
+    return pv * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  }
+
+  const firstInstType = (watch("payment_installments") || [])[0]?.payment_type || paymentTypes[0] || "";
+  const effectiveRate = getRateForType(firstInstType);
+  const pmt = count > 0 ? calculatePMT(remaining, effectiveRate, count) : remaining;
+
+  let balance = remaining;
   const installmentDetails = (watch("payment_installments") || []).map((inst: { installment: number; description: string; due_date: string; percentage: number; payment_type?: string }, i: number) => {
     const pType = inst.payment_type || "";
     if (!pType || (i === 0 && (depositPercentage ?? 0) > 0 && inst.description === "Sinal de Entrada")) {
-      return { ...inst, payment_type: pType, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0 };
+      return { ...inst, payment_type: pType, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0, amortization: totalAmount * inst.percentage / 100 };
     }
-    const base = totalAmount * inst.percentage / 100;
-    const rate = getRateForType(pType);
-    const withInterest = base * (1 + rate / 100);
-    return { ...inst, payment_type: pType, baseValue: base, rate, withInterest, interestAmount: withInterest - base };
+    const instRate = getRateForType(pType);
+    const instR = instRate / 100;
+    const interest = balance * instR;
+    const amortization = pmt - interest;
+    balance -= amortization;
+    return { ...inst, payment_type: pType, baseValue: amortization, rate: instRate, withInterest: pmt, interestAmount: interest, amortization };
   });
 
   const totalOriginal = totalAmount;
@@ -1133,10 +1146,10 @@ export default function BudgetEditPage() {
                       {" "}
                       {d.rate > 0 ? (
                         <>
-                          <span className="text-[#8B7A6B]">{formatCurrency(d.baseValue)}</span>
-                          {" + "}
-                          <span className="text-orange-600">{d.rate}%</span>
-                          {" = "}
+                          <span className="text-[#8B7A6B]">{formatCurrency(d.amortization ?? d.baseValue)}</span>
+                          {" amort. + "}
+                          <span className="text-orange-600">{formatCurrency(d.interestAmount)}</span>
+                          {" juros = "}
                           <span className="font-semibold text-[#3D2519]">{formatCurrency(d.withInterest)}</span>
                         </>
                       ) : (
