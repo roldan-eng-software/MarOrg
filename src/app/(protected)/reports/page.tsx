@@ -37,6 +37,7 @@ const statusLabels: Record<string, string> = {
   recusado: "Recusado",
   vencido: "Vencido",
   revisado: "Revisado",
+  concluido: "Concluído",
   pendente: "Pendente",
   em_producao: "Em Produção",
   acabamento: "Acabamento",
@@ -56,6 +57,7 @@ const statusColors: Record<string, string> = {
   pronto: "bg-green-100 text-green-700",
   entregue: "bg-emerald-100 text-emerald-700",
   cancelada: "bg-red-100 text-red-700",
+  concluido: "bg-emerald-100 text-emerald-700",
 };
 
 function StatCard({ label, value, subtitle }: { label: string; value: string; subtitle?: string }) {

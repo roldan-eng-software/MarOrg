@@ -47,6 +47,7 @@ const statusLabels: Record<string, string> = {
   recusado: "Recusado",
   vencido: "Vencido",
   revisado: "Revisado",
+  concluido: "Concluído",
 };
 
 const statusVariants: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
@@ -57,6 +58,7 @@ const statusVariants: Record<string, "default" | "success" | "warning" | "danger
   recusado: "danger",
   vencido: "danger",
   revisado: "info",
+  concluido: "success",
 };
 
 export default function PortalPage() {

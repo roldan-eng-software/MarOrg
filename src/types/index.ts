@@ -46,7 +46,8 @@ export interface Budget {
     | "aprovado"
     | "recusado"
     | "vencido"
-    | "revisado";
+    | "revisado"
+    | "concluido";
   version: number;
   validity_days: number;
   delivery_days: number;

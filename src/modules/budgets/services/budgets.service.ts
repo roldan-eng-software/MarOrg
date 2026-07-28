@@ -115,7 +115,7 @@ export async function updateBudget(
     .single();
 
   if (fetchError) throw fetchError;
-  if (["aprovado", "recusado", "vencido"].includes(existing.status)) {
+  if (["aprovado", "recusado", "vencido", "concluido"].includes(existing.status)) {
     throw new Error("Não é possível editar orçamento com status final");
   }
 

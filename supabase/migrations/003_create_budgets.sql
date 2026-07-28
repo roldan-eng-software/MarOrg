@@ -4,7 +4,7 @@ CREATE TABLE budgets (
   budget_number TEXT NOT NULL UNIQUE,
   customer_id UUID NOT NULL REFERENCES customers(id),
   status TEXT NOT NULL DEFAULT 'rascunho' CHECK (status IN (
-    'rascunho', 'enviado', 'em_analise', 'aprovado', 'recusado', 'vencido', 'revisado'
+    'rascunho', 'enviado', 'em_analise', 'aprovado', 'recusado', 'vencido', 'revisado', 'concluido'
   )),
   version INTEGER NOT NULL DEFAULT 1,
   validity_days INTEGER NOT NULL DEFAULT 30,
@@ -28,7 +28,7 @@ CREATE TRIGGER tr_budgets_updated_at
 CREATE OR REPLACE FUNCTION prevent_budget_edit_after_decision()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF OLD.status IN ('aprovado', 'recusado', 'vencido') THEN
+  IF OLD.status IN ('aprovado', 'recusado', 'vencido', 'concluido') THEN
     RAISE EXCEPTION 'Não é possível editar orçamento com status %', OLD.status;
   END IF;
   RETURN NEW;

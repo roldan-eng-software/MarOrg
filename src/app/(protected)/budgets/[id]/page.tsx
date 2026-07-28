@@ -24,6 +24,7 @@ const statusLabels: Record<Budget["status"], string> = {
   recusado: "Recusado",
   vencido: "Vencido",
   revisado: "Revisado",
+  concluido: "Concluído",
 };
 
 const statusVariants: Record<
@@ -37,6 +38,7 @@ const statusVariants: Record<
   recusado: "danger",
   vencido: "danger",
   revisado: "info",
+  concluido: "success",
 };
 
 const paymentTypeLabels: Record<string, string> = {

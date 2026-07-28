@@ -35,6 +35,7 @@ const statusLabels: Record<string, string> = {
   recusado: "Recusado",
   vencido: "Vencido",
   revisado: "Revisado",
+  concluido: "Concluído",
 };
 
 const statusVariants: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
@@ -45,6 +46,7 @@ const statusVariants: Record<string, "default" | "success" | "warning" | "danger
   recusado: "danger",
   vencido: "danger",
   revisado: "info",
+  concluido: "success",
 };
 
 export default function BudgetEditPage() {
@@ -213,7 +215,7 @@ export default function BudgetEditPage() {
   async function handleStatusChange(newStatus: string) {
     try {
       setLoading(true);
-      await updateBudgetStatus(params.id as string, newStatus as "rascunho" | "enviado" | "em_analise" | "aprovado" | "recusado" | "vencido" | "revisado");
+      await updateBudgetStatus(params.id as string, newStatus as "rascunho" | "enviado" | "em_analise" | "aprovado" | "recusado" | "vencido" | "revisado" | "concluido");
       setBudgetStatus(newStatus);
       showToast(`Status alterado para ${statusLabels[newStatus]}`, "success");
     } catch {
@@ -618,6 +620,13 @@ export default function BudgetEditPage() {
         )}
         {budgetStatus === "aprovado" && (
           <>
+            <Button
+              variant="primary"
+              onClick={() => handleStatusChange("concluido")}
+              disabled={loading}
+            >
+              Marcar como Concluído
+            </Button>
             <Button
               variant="primary"
               onClick={handleGenerateOS}

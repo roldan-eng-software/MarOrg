@@ -165,7 +165,7 @@ export async function updateBudget(
     console.error("Error fetching budget:", fetchError.message);
     throw new Error("Orçamento não encontrado");
   }
-  if (["aprovado", "recusado", "vencido"].includes(existing.status)) {
+  if (["aprovado", "recusado", "vencido", "concluido"].includes(existing.status)) {
     throw new Error("Não é possível editar orçamento com status final");
   }
 
@@ -214,6 +214,7 @@ export async function updateBudgetStatus(
   if (status === "enviado") updateData.sent_at = new Date().toISOString();
   if (status === "aprovado") updateData.approved_at = new Date().toISOString();
   if (status === "recusado") updateData.refused_at = new Date().toISOString();
+  if (status === "concluido") updateData.concluded_at = new Date().toISOString();
 
   const { error } = await supabase
     .from("budgets")
