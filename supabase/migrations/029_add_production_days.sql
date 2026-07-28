@@ -1,0 +1,2 @@
+ALTER TABLE budgets
+  ADD COLUMN production_days INTEGER NOT NULL DEFAULT 0;

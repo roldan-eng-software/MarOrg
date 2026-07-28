@@ -51,6 +51,7 @@ export interface Budget {
   version: number;
   validity_days: number;
   delivery_days: number;
+  production_days: number;
   notes_internal: string | null;
   notes_client: string | null;
   total_amount: number;

@@ -91,6 +91,7 @@ export default function BudgetNewPage() {
   const items = watch("items");
   const depositPercentage = watch("deposit_percentage");
   const installmentCount = watch("installment_count");
+  const productionDays = watch("production_days") || 0;
 
   useEffect(() => {
     listCustomersServer()
@@ -141,6 +142,14 @@ export default function BudgetNewPage() {
 
     setValue("payment_installments", newInstallments);
   }, [depositPercentage, installmentCount, setValue]);
+
+  useEffect(() => {
+    setBudgetCosts((prev) =>
+      prev.map((c) =>
+        c.costType === "fixo" ? { ...c, quantity: productionDays } : c
+      )
+    );
+  }, [productionDays]);
 
   function getItemMaterialsCost(itemIndex: number) {
     const mats = itemMaterials[itemIndex] || [];
@@ -240,14 +249,15 @@ export default function BudgetNewPage() {
   }
 
   function addCostFromTemplate(cost: Cost) {
+    const isFixed = cost.cost_type === "fixo";
     setBudgetCosts((prev) => [
       ...prev,
       {
         costId: cost.id,
         name: cost.name,
         costType: cost.cost_type,
-        value: Number(cost.default_value),
-        quantity: 1,
+        value: isFixed ? Number(cost.default_value) / 30 : Number(cost.default_value),
+        quantity: isFixed ? productionDays : 1,
       },
     ]);
   }
@@ -284,6 +294,7 @@ export default function BudgetNewPage() {
           status: "rascunho",
           validity_days: data.validity_days,
           delivery_days: data.delivery_days,
+          production_days: Number(data.production_days ?? 0),
           notes_internal: data.notes_internal || null,
           notes_client: data.notes_client || null,
           payment_conditions: data.payment_conditions || null,
@@ -364,6 +375,17 @@ export default function BudgetNewPage() {
               type="number"
               {...register("delivery_days")}
             />
+            <Input
+              id="production_days"
+              label="Dias de Produção"
+              type="number"
+              min="0"
+              {...register("production_days")}
+              placeholder="Usado para calcular custos fixos"
+            />
+            <p className="text-xs text-[#8B7A6B]">
+              Os custos fixos são calculados automaticamente: (valor mensal ÷ 30) × dias de produção
+            </p>
           </CardContent>
         </Card>
 
@@ -617,23 +639,47 @@ export default function BudgetNewPage() {
                       {cost.costType === "fixo" ? "Fixo" : "Variável"}
                     </Badge>
                     <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={cost.quantity}
-                        onChange={(e) => updateBudgetCost(i, "quantity", Number(e.target.value))}
-                        className="w-14 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-center"
-                      />
-                      <span className="text-xs text-[#8B7A6B]">x</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={cost.value}
-                        onChange={(e) => updateBudgetCost(i, "value", Number(e.target.value))}
-                        className="w-20 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-right"
-                      />
+                      {cost.costType === "fixo" ? (
+                        <>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={cost.value}
+                            onChange={(e) => updateBudgetCost(i, "value", Number(e.target.value))}
+                            className="w-20 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-right"
+                          />
+                          <span className="text-[10px] text-[#8B7A6B]">/dia</span>
+                          <span className="text-xs text-[#8B7A6B]">x</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={cost.quantity}
+                            onChange={(e) => updateBudgetCost(i, "quantity", Number(e.target.value))}
+                            className="w-14 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-center"
+                          />
+                          <span className="text-[10px] text-[#8B7A6B]">d</span>
+                        </>
+                      ) : (
+                        <>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={cost.value}
+                            onChange={(e) => updateBudgetCost(i, "value", Number(e.target.value))}
+                            className="w-20 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-right"
+                          />
+                          <span className="text-xs text-[#8B7A6B]">x</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={cost.quantity}
+                            onChange={(e) => updateBudgetCost(i, "quantity", Number(e.target.value))}
+                            className="w-14 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-center"
+                          />
+                        </>
+                      )}
                       <span className="text-xs font-semibold text-[#3D2519] w-16 text-right">
                         {formatCurrency(cost.value * cost.quantity)}
                       </span>
