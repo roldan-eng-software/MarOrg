@@ -248,6 +248,15 @@ export interface ServiceOrderItemMaterial {
   created_at: string;
 }
 
+export interface BudgetItemMaterial {
+  id: string;
+  budget_item_id: string;
+  material_id: string;
+  quantity: number;
+  unit_cost: number;
+  created_at: string;
+}
+
 export interface Supplier {
   id: string;
   name: string;

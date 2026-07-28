@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Budget, BudgetItem } from "@/types";
+import type { Budget, BudgetItem, BudgetItemMaterial } from "@/types";
 
 export async function generateBudgetNumber(): Promise<string> {
   const supabase = createAdminClient();
@@ -82,6 +82,38 @@ export async function getBudget(id: string) {
   };
 }
 
+export async function getBudgetItemMaterials(budgetId: string) {
+  const supabase = await createClient();
+
+  const itemIds = await supabase
+    .from("budget_items")
+    .select("id")
+    .eq("budget_id", budgetId);
+
+  if (itemIds.error || !itemIds.data || itemIds.data.length === 0) {
+    return {} as Record<string, (BudgetItemMaterial & { materials: { name: string; unit: string; cost: number } })[]>;
+  }
+
+  const ids = itemIds.data.map((i) => i.id);
+
+  const { data: materials } = await supabase
+    .from("budget_item_materials")
+    .select("*, materials(name, unit, cost)")
+    .in("budget_item_id", ids)
+    .order("created_at");
+
+  if (!materials) return {} as Record<string, (BudgetItemMaterial & { materials: { name: string; unit: string; cost: number } })[]>;
+
+  const grouped: Record<string, (BudgetItemMaterial & { materials: { name: string; unit: string; cost: number } })[]> = {};
+  for (const mat of materials) {
+    const itemId = mat.budget_item_id;
+    if (!grouped[itemId]) grouped[itemId] = [];
+    grouped[itemId].push(mat as BudgetItemMaterial & { materials: { name: string; unit: string; cost: number } });
+  }
+
+  return grouped;
+}
+
 export async function createBudget(
   budget: Omit<Budget, "id" | "created_at" | "updated_at" | "total_amount" | "budget_number" | "version" | "sent_at" | "approved_at" | "refused_at"> & {
     payment_conditions?: string | null;
@@ -90,7 +122,8 @@ export async function createBudget(
     deposit_percentage?: number;
     installment_count?: number;
   },
-  items: Omit<BudgetItem, "id" | "created_at" | "budget_id">[]
+  items: Omit<BudgetItem, "id" | "created_at" | "budget_id">[],
+  materials?: Record<number, { material_id: string; quantity: number; unit_cost: number }[]>
 ) {
   const supabase = await createClient();
 
@@ -126,16 +159,39 @@ export async function createBudget(
   }
 
   if (items.length > 0) {
-    const { error: itemsError } = await supabase.from("budget_items").insert(
-      items.map((item, i) => ({
-        ...item,
-        budget_id: newBudget.id,
-        sort_order: i,
-      }))
-    );
+    const { data: insertedItems, error: itemsError } = await supabase
+      .from("budget_items")
+      .insert(
+        items.map((item, i) => ({
+          ...item,
+          budget_id: newBudget.id,
+          sort_order: i,
+        }))
+      )
+      .select("id, sort_order");
     if (itemsError) {
       console.error("Error creating budget items:", itemsError.message);
       throw new Error("Erro ao criar itens do orçamento");
+    }
+
+    if (insertedItems && materials) {
+      const materialRows: { budget_item_id: string; material_id: string; quantity: number; unit_cost: number }[] = [];
+      for (const item of insertedItems) {
+        const itemMaterials = materials[item.sort_order];
+        if (itemMaterials && itemMaterials.length > 0) {
+          for (const mat of itemMaterials) {
+            materialRows.push({
+              budget_item_id: item.id,
+              material_id: mat.material_id,
+              quantity: mat.quantity,
+              unit_cost: mat.unit_cost,
+            });
+          }
+        }
+      }
+      if (materialRows.length > 0) {
+        await supabase.from("budget_item_materials").insert(materialRows);
+      }
     }
   }
 
@@ -151,7 +207,8 @@ export async function updateBudget(
     deposit_percentage?: number;
     installment_count?: number;
   },
-  items?: (Omit<BudgetItem, "id" | "created_at" | "budget_id"> & { id?: string })[]
+  items?: (Omit<BudgetItem, "id" | "created_at" | "budget_id"> & { id?: string })[],
+  materials?: Record<number, { material_id: string; quantity: number; unit_cost: number }[]>
 ) {
   const supabase = await createClient();
 
@@ -180,10 +237,13 @@ export async function updateBudget(
   }
 
   if (items) {
+    await supabase.from("budget_item_materials").delete().in("budget_item_id",
+      (await supabase.from("budget_items").select("id").eq("budget_id", id)).data?.map((i) => i.id) ?? []
+    );
     await supabase.from("budget_items").delete().eq("budget_id", id);
 
     if (items.length > 0) {
-      const { error: itemsError } = await supabase
+      const { data: insertedItems, error: itemsError } = await supabase
         .from("budget_items")
         .insert(
           items.map((item, i) => ({
@@ -192,10 +252,31 @@ export async function updateBudget(
             budget_id: id,
             sort_order: i,
           }))
-        );
+        )
+        .select("id, sort_order");
       if (itemsError) {
         console.error("Error updating budget items:", itemsError.message);
         throw new Error("Erro ao atualizar itens do orçamento");
+      }
+
+      if (insertedItems && materials) {
+        const materialRows: { budget_item_id: string; material_id: string; quantity: number; unit_cost: number }[] = [];
+        for (const item of insertedItems) {
+          const itemMaterials = materials[item.sort_order];
+          if (itemMaterials && itemMaterials.length > 0) {
+            for (const mat of itemMaterials) {
+              materialRows.push({
+                budget_item_id: item.id,
+                material_id: mat.material_id,
+                quantity: mat.quantity,
+                unit_cost: mat.unit_cost,
+              });
+            }
+          }
+        }
+        if (materialRows.length > 0) {
+          await supabase.from("budget_item_materials").insert(materialRows);
+        }
       }
     }
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,12 +21,18 @@ import { FurnitureSelect } from "@/components/furniture-select";
 import { MaterialPicker } from "@/components/material-picker";
 import type { Customer, FurnitureTemplate, Material } from "@/types";
 
+interface ItemMaterial {
+  materialId: string;
+  name: string;
+  unitCost: number;
+  quantity: number;
+}
+
 export default function BudgetNewPage() {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
-  const [materialSelections, setMaterialSelections] = useState<Record<number, string | null>>({});
-  const [materialCosts, setMaterialCosts] = useState<Record<string, number>>({});
+  const [itemMaterials, setItemMaterials] = useState<Record<number, ItemMaterial[]>>({});
   const [manualRawCost, setManualRawCost] = useState<number | null>(null);
   const [overheadCost, setOverheadCost] = useState(0);
   const [profitMargin, setProfitMargin] = useState(0);
@@ -122,17 +128,54 @@ export default function BudgetNewPage() {
     setValue("payment_installments", newInstallments);
   }, [depositPercentage, installmentCount, setValue]);
 
-  const computedRawCost = items.reduce((sum, item, i) => {
-    const mid = materialSelections[i];
-    if (!mid) return sum;
-    const cost = materialCosts[mid] ?? 0;
-    return sum + cost * (item.quantity || 0);
-  }, 0);
+  function getItemMaterialsCost(itemIndex: number) {
+    const mats = itemMaterials[itemIndex] || [];
+    return mats.reduce((sum, m) => sum + m.unitCost * m.quantity, 0);
+  }
+
+  const computedRawCost = (items ?? []).reduce((sum, _item, i) => sum + getItemMaterialsCost(i), 0);
 
   const rawMaterialCost = manualRawCost !== null ? manualRawCost : computedRawCost;
   const totalCost = rawMaterialCost + overheadCost;
   const suggestedTotal = totalCost * (1 + profitMargin / 100);
   const estimatedProfit = suggestedTotal - totalCost;
+
+  function addMaterialToItem(itemIndex: number, material: Material) {
+    setItemMaterials((prev) => {
+      const current = [...(prev[itemIndex] || [])];
+      current.push({
+        materialId: material.id,
+        name: material.name,
+        unitCost: Number(material.cost),
+        quantity: 1,
+      });
+      return { ...prev, [itemIndex]: current };
+    });
+  }
+
+  function removeMaterialFromItem(itemIndex: number, matIndex: number) {
+    setItemMaterials((prev) => {
+      const current = [...(prev[itemIndex] || [])];
+      current.splice(matIndex, 1);
+      return { ...prev, [itemIndex]: current };
+    });
+  }
+
+  function updateMaterialQty(itemIndex: number, matIndex: number, qty: number) {
+    setItemMaterials((prev) => {
+      const current = [...(prev[itemIndex] || [])];
+      current[matIndex] = { ...current[matIndex], quantity: qty };
+      return { ...prev, [itemIndex]: current };
+    });
+  }
+
+  function updateMaterialCost(itemIndex: number, matIndex: number, cost: number) {
+    setItemMaterials((prev) => {
+      const current = [...(prev[itemIndex] || [])];
+      current[matIndex] = { ...current[matIndex], unitCost: cost };
+      return { ...prev, [itemIndex]: current };
+    });
+  }
 
   function applySuggestedPrice() {
     if (totalCost <= 0 || profitMargin <= 0) {
@@ -141,15 +184,15 @@ export default function BudgetNewPage() {
     }
 
     const itemsWithCost: { index: number; costTotal: number }[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const mid = materialSelections[i];
-      if (!mid) continue;
-      const cost = materialCosts[mid] ?? 0;
-      itemsWithCost.push({ index: i, costTotal: cost * (items[i].quantity || 0) });
+    for (let i = 0; i < (items ?? []).length; i++) {
+      const costTotal = getItemMaterialsCost(i);
+      if (costTotal > 0) {
+        itemsWithCost.push({ index: i, costTotal });
+      }
     }
 
     if (itemsWithCost.length === 0) {
-      showToast("Selecione materiais nos itens para aplicar o preço sugerido", "error");
+      showToast("Adicione materiais aos itens para aplicar o preço sugerido", "error");
       return;
     }
 
@@ -158,11 +201,27 @@ export default function BudgetNewPage() {
     for (const { index, costTotal } of itemsWithCost) {
       const share = totalRawCost > 0 ? costTotal / totalRawCost : 1 / itemsWithCost.length;
       const contribution = suggestedTotal * share;
-      const unitPrice = contribution / (items[index].quantity || 1);
+      const unitPrice = contribution / ((items?.[index]?.quantity ?? 0) || 1);
       setValue(`items.${index}.unit_price`, Math.round(unitPrice * 100) / 100);
     }
 
     showToast("Preço sugerido aplicado aos itens", "success");
+  }
+
+  function buildMaterialsPayload() {
+    const payload: Record<number, { material_id: string; quantity: number; unit_cost: number }[]> = {};
+    for (const itemIndexStr of Object.keys(itemMaterials)) {
+      const itemIndex = Number(itemIndexStr);
+      const mats = itemMaterials[itemIndex];
+      if (mats && mats.length > 0) {
+        payload[itemIndex] = mats.map((m) => ({
+          material_id: m.materialId,
+          quantity: m.quantity,
+          unit_cost: m.unitCost,
+        }));
+      }
+    }
+    return payload;
   }
 
   async function onSubmit(data: BudgetFormData) {
@@ -190,7 +249,7 @@ export default function BudgetNewPage() {
           item_type: item.item_type,
           description: item.description,
           material: item.material || null,
-          material_id: materialSelections[i] ?? null,
+          material_id: null,
           width_cm: item.width_cm || null,
           depth_cm: item.depth_cm || null,
           height_cm: item.height_cm || null,
@@ -202,7 +261,8 @@ export default function BudgetNewPage() {
           total_price: item.quantity * item.unit_price - (item.discount || 0),
           notes: item.notes || null,
           sort_order: i,
-        }))
+        })),
+        buildMaterialsPayload()
       );
       showToast("Orçamento criado com sucesso", "success");
       router.push("/budgets");
@@ -256,7 +316,7 @@ export default function BudgetNewPage() {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() =>
+              onClick={() => {
                 append({
                   item_type: "mobiliario",
                   description: "",
@@ -266,8 +326,8 @@ export default function BudgetNewPage() {
                   unit_price: 0,
                   discount: 0,
                   sort_order: fields.length,
-                })
-              }
+                });
+              }}
             >
               + Adicionar Item
             </Button>
@@ -287,7 +347,12 @@ export default function BudgetNewPage() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => remove(index)}
+                      onClick={() => {
+                        remove(index);
+                        const newMaterials = { ...itemMaterials };
+                        delete newMaterials[index];
+                        setItemMaterials(newMaterials);
+                      }}
                     >
                       Remover
                     </Button>
@@ -334,28 +399,6 @@ export default function BudgetNewPage() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <MaterialPicker
-                    value={items?.[index]?.material || ""}
-                    materialId={materialSelections[index] ?? null}
-                    onChange={(val) => setValue(`items.${index}.material`, val)}
-                    onMaterialSelect={(mat) => {
-                      setMaterialSelections((prev) => ({ ...prev, [index]: mat.id }));
-                      setMaterialCosts((prev) => ({ ...prev, [mat.id]: Number(mat.cost) }));
-                      if (mat.cost > 0) setValue(`items.${index}.unit_price`, Number(mat.cost));
-                      if (mat.unit) setValue(`items.${index}.unit`, mat.unit);
-                    }}
-                    onClear={() => {
-                      const prev = materialSelections[index];
-                      setMaterialSelections((prev2) => ({ ...prev2, [index]: null }));
-                      if (prev) {
-                        setMaterialCosts((prev2) => {
-                          const next = { ...prev2 };
-                          delete next[prev];
-                          return next;
-                        });
-                      }
-                    }}
-                  />
                   <Input
                     id={`items.${index}.unit`}
                     label="Unidade *"
@@ -408,6 +451,78 @@ export default function BudgetNewPage() {
                     step="0.01"
                     {...register(`items.${index}.discount`)}
                   />
+                </div>
+
+                {/* Materiais do Item */}
+                <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-3 space-y-2">
+                  <p className="text-xs font-semibold uppercase text-[#8B7A6B]">
+                    Materiais do Item
+                  </p>
+
+                  {(itemMaterials[index] || []).length === 0 ? (
+                    <p className="text-xs text-[#8B7A6B]">
+                      Nenhum material adicionado. Selecione abaixo os materiais usados neste item.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {(itemMaterials[index] || []).map((mat, mi) => (
+                        <div
+                          key={mi}
+                          className="flex items-center gap-2 rounded bg-white border border-[#D4C4B0] px-3 py-2"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#3D2519] truncate">
+                              {mat.name}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={mat.quantity}
+                              onChange={(e) => updateMaterialQty(index, mi, Number(e.target.value))}
+                              className="w-16 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-center"
+                            />
+                            <span className="text-xs text-[#8B7A6B]">x</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={mat.unitCost}
+                              onChange={(e) => updateMaterialCost(index, mi, Number(e.target.value))}
+                              className="w-20 rounded border border-[#D4C4B0] px-1.5 py-1 text-xs text-right"
+                            />
+                            <span className="text-xs font-semibold text-[#3D2519] w-16 text-right">
+                              {formatCurrency(mat.unitCost * mat.quantity)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeMaterialFromItem(index, mi)}
+                            className="text-red-400 hover:text-red-600 text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <MaterialPicker
+                    value=""
+                    materialId={null}
+                    onChange={() => {}}
+                    onMaterialSelect={(mat) => addMaterialToItem(index, mat)}
+                    onClear={() => {}}
+                  />
+
+                  {(itemMaterials[index] || []).length > 0 && (
+                    <div className="flex justify-between text-xs font-semibold text-[#3D2519] pt-1 border-t border-[#D4C4B0]">
+                      <span>Total Materiais</span>
+                      <span>{formatCurrency(getItemMaterialsCost(index))}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
