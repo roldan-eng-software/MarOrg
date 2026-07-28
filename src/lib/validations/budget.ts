@@ -35,6 +35,7 @@ export const budgetSchema = z.object({
     description: z.string(),
     due_date: z.string(),
     percentage: z.coerce.number().min(0).max(100),
+    payment_type: z.string().default(""),
   })).default([]),
   payment_types: z.array(z.string()).default([]),
   deposit_percentage: z.coerce.number().min(0).max(100).default(0),

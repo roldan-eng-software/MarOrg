@@ -16,6 +16,7 @@ import {
 } from "@/modules/budgets/services/budgets.actions";
 import { listCustomersServer } from "@/modules/customers/services/customers.actions";
 import { listCosts, getBudgetCosts } from "@/modules/costs/services/costs.actions";
+import { getActiveInterestRates } from "@/modules/payments/services/payments.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -27,7 +28,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import { FurnitureSelect } from "@/components/furniture-select";
 import { MaterialPicker } from "@/components/material-picker";
 import { createServiceOrderFromBudget } from "@/modules/service-orders/services/service-orders.actions";
-import type { Customer, BudgetItem, FurnitureTemplate, Material, Cost } from "@/types";
+import type { Customer, BudgetItem, FurnitureTemplate, Material, Cost, PaymentInterestRate } from "@/types";
 
 interface ItemMaterial {
   materialId: string;
@@ -78,6 +79,8 @@ export default function BudgetEditPage() {
   const [manualRawCost, setManualRawCost] = useState<number | null>(null);
   const [budgetCosts, setBudgetCosts] = useState<BudgetCostForm[]>([]);
   const [availableCosts, setAvailableCosts] = useState<Cost[]>([]);
+  const [interestRates, setInterestRates] = useState<PaymentInterestRate[]>([]);
+  const [installmentPaymentTypes, setInstallmentPaymentTypes] = useState<Record<number, string>>({});
   const [profitMargin, setProfitMargin] = useState(0);
 
   const {
@@ -109,11 +112,22 @@ export default function BudgetEditPage() {
       getBudgetItemMaterials(params.id as string),
       listCosts(true),
       getBudgetCosts(params.id as string),
-    ]).then(([budget, customerList, materialsMap, costs, savedBudgetCosts]) => {
+      getActiveInterestRates(),
+    ]).then(([budget, customerList, materialsMap, costs, savedBudgetCosts, rates]) => {
       setBudgetStatus(budget.status);
       setCustomers(customerList);
       setProfitMargin(Number(budget.profit_margin ?? 0));
       setAvailableCosts(costs);
+      setInterestRates(rates);
+
+      const savedInstallmentTypes: Record<number, string> = {};
+      const installments = budget.payment_installments ?? [];
+      installments.forEach((inst: { payment_type?: string; installment?: number }, i: number) => {
+        if (inst.payment_type) {
+          savedInstallmentTypes[i] = inst.payment_type;
+        }
+      });
+      setInstallmentPaymentTypes(savedInstallmentTypes);
       reset({
         customer_id: budget.customer_id,
         validity_days: budget.validity_days,
@@ -185,10 +199,33 @@ export default function BudgetEditPage() {
   const count = installmentCount ?? 1;
   const installmentValue = count > 0 ? remaining / count : remaining;
 
+  const paymentTypes = watch("payment_types") || [];
+
+  function getRateForType(type: string): number {
+    const found = interestRates.find((r) => r.payment_type === type);
+    return found ? Number(found.monthly_rate) : 0;
+  }
+
+  const installmentDetails = (watch("payment_installments") || []).map((inst: { installment: number; description: string; due_date: string; percentage: number; payment_type?: string }, i: number) => {
+    const pType = inst.payment_type || "";
+    if (!pType || (i === 0 && (depositPercentage ?? 0) > 0 && inst.description === "Sinal de Entrada")) {
+      return { ...inst, payment_type: pType, baseValue: totalAmount * inst.percentage / 100, rate: 0, withInterest: totalAmount * inst.percentage / 100, interestAmount: 0 };
+    }
+    const base = totalAmount * inst.percentage / 100;
+    const rate = getRateForType(pType);
+    const withInterest = base * (1 + rate / 100);
+    return { ...inst, payment_type: pType, baseValue: base, rate, withInterest, interestAmount: withInterest - base };
+  });
+
+  const totalOriginal = totalAmount;
+  const totalWithInterest = installmentDetails.reduce((sum: number, d: { withInterest: number }) => sum + d.withInterest, 0);
+  const totalInterest = totalWithInterest - totalOriginal;
+
   useEffect(() => {
     if (!canEdit) return;
     const pct = depositPercentage ?? 0;
     const instCount = installmentCount ?? 1;
+    const defaultType = paymentTypes[0] || "";
     const newInstallments: BudgetFormData["payment_installments"] = [];
 
     if (pct > 0) {
@@ -197,6 +234,7 @@ export default function BudgetEditPage() {
         description: "Sinal de Entrada",
         due_date: "",
         percentage: pct,
+        payment_type: "",
       });
     }
 
@@ -209,11 +247,12 @@ export default function BudgetEditPage() {
         description: instCount === 1 ? "Pagamento Único" : `Parcela ${i + 1}/${instCount}`,
         due_date: "",
         percentage: Math.round(perInstallmentPct * 100) / 100,
+        payment_type: installmentPaymentTypes[i] || defaultType,
       });
     }
 
     setValue("payment_installments", newInstallments);
-  }, [depositPercentage, installmentCount, canEdit, setValue]);
+  }, [depositPercentage, installmentCount, canEdit, paymentTypes, installmentPaymentTypes, setValue]);
 
   useEffect(() => {
     setBudgetCosts((prev) =>
@@ -370,7 +409,13 @@ export default function BudgetEditPage() {
           notes_internal: data.notes_internal || null,
           notes_client: data.notes_client || null,
           payment_conditions: data.payment_conditions || null,
-          payment_installments: data.payment_installments || [],
+          payment_installments: installmentDetails.map((d) => ({
+            installment: d.installment,
+            description: d.description,
+            due_date: d.due_date,
+            percentage: d.percentage,
+            payment_type: d.payment_type || "",
+          })),
           payment_types: data.payment_types || [],
           deposit_percentage: data.deposit_percentage ?? 0,
           installment_count: data.installment_count ?? 1,
@@ -1012,31 +1057,109 @@ export default function BudgetEditPage() {
               />
             </div>
 
+            {count > 1 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-[#3D2519]">
+                    Tipo de Pagamento por Parcela
+                  </label>
+                  {canEdit && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const firstType = installmentPaymentTypes[0] || paymentTypes[0] || "";
+                        const newTypes: Record<number, string> = {};
+                        for (let i = 0; i < count; i++) {
+                          newTypes[i] = firstType;
+                        }
+                        setInstallmentPaymentTypes(newTypes);
+                      }}
+                    >
+                      Usar mesmo tipo em todas
+                    </Button>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {Array.from({ length: count }, (_, i) => (
+                    <div key={i} className="flex items-center gap-3 rounded bg-[#F5F0EB] border border-[#D4C4B0] px-3 py-2">
+                      <span className="text-sm text-[#8B7A6B] w-20">
+                        Parcela {i + 1}
+                      </span>
+                      <select
+                        value={installmentPaymentTypes[i] || ""}
+                        onChange={(e) => {
+                          setInstallmentPaymentTypes((prev) => ({
+                            ...prev,
+                            [i]: e.target.value,
+                          }));
+                        }}
+                        disabled={!canEdit}
+                        className="flex-1 rounded border border-[#D4C4B0] bg-white px-2 py-1 text-sm text-[#3D2519]"
+                      >
+                        <option value="">Selecione o tipo</option>
+                        {paymentTypes.map((type: string) => (
+                          <option key={type} value={type}>
+                            {type} {getRateForType(type) > 0 ? `(${getRateForType(type)}%/mês)` : "(sem juros)"}
+                          </option>
+                        ))}
+                      </select>
+                      {installmentPaymentTypes[i] && (
+                        <span className="text-xs text-[#8B7A6B] w-16 text-right">
+                          {getRateForType(installmentPaymentTypes[i]) > 0
+                            ? `${getRateForType(installmentPaymentTypes[i])}%`
+                            : "0%"}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {totalAmount > 0 && (
               <div className="rounded-md bg-[#F5F0EB] border border-[#D4C4B0] p-4">
                 <p className="text-sm font-medium text-[#3D2519] mb-2">Resumo do Pagamento</p>
                 <div className="space-y-1 text-sm text-[#8B7A6B]">
                   {(depositPercentage ?? 0) > 0 && (
                     <p>
-                      Sinal ({depositPercentage}%): <span className="font-semibold text-[#3D2519]">{formatCurrency(depositValue)}</span>
+                      Sinal ({depositPercentage}%): <span className="font-semibold text-[#3D2519]">{formatCurrency(depositValue)}</span> <span className="text-xs">(sem juros)</span>
                     </p>
                   )}
-                  {count > 1 ? (
-                    <p>
-                      Restante: <span className="font-semibold text-[#3D2519]">{count}x de {formatCurrency(installmentValue)}</span>
+                  {installmentDetails.filter((d) => d.description !== "Sinal de Entrada").map((d, i) => (
+                    <p key={i}>
+                      {d.description} - {d.payment_type || "Sem tipo"}:
+                      {" "}
+                      {d.rate > 0 ? (
+                        <>
+                          <span className="text-[#8B7A6B]">{formatCurrency(d.baseValue)}</span>
+                          {" + "}
+                          <span className="text-orange-600">{d.rate}%</span>
+                          {" = "}
+                          <span className="font-semibold text-[#3D2519]">{formatCurrency(d.withInterest)}</span>
+                        </>
+                      ) : (
+                        <span className="font-semibold text-[#3D2519]">{formatCurrency(d.withInterest)}</span>
+                      )}
                     </p>
-                  ) : (depositPercentage ?? 0) > 0 ? (
-                    <p>
-                      Restante: <span className="font-semibold text-[#3D2519]">{formatCurrency(remaining)}</span> (pagamento único)
-                    </p>
-                  ) : (
-                    <p>
-                      Pagamento à vista: <span className="font-semibold text-[#3D2519]">{formatCurrency(totalAmount)}</span>
-                    </p>
-                  )}
-                  <p className="pt-1 border-t border-[#D4C4B0] mt-1">
-                    Total: <span className="font-bold text-[#3D2519]">{formatCurrency(totalAmount)}</span>
-                  </p>
+                  ))}
+                  <div className="pt-2 border-t border-[#D4C4B0] mt-1 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span className="font-medium text-[#3D2519]">{formatCurrency(totalOriginal)}</span>
+                    </div>
+                    {totalInterest > 0 && (
+                      <div className="flex justify-between">
+                        <span>Juros Total</span>
+                        <span className="font-medium text-orange-600">{formatCurrency(totalInterest)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold">
+                      <span className="text-[#3D2519]">TOTAL</span>
+                      <span className="text-[#3D2519]">{formatCurrency(totalWithInterest)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1072,8 +1195,15 @@ export default function BudgetEditPage() {
         </Card>
 
         <div className="flex items-center justify-between rounded-md bg-[#5B3A29] px-6 py-4 text-white">
-          <span className="text-lg font-semibold">Total</span>
-          <span className="text-2xl font-bold">{formatCurrency(totalAmount)}</span>
+          <div>
+            <span className="text-lg font-semibold">Total</span>
+            {totalInterest > 0 && (
+              <span className="text-xs text-orange-300 ml-2">
+                (+{formatCurrency(totalInterest)} juros)
+              </span>
+            )}
+          </div>
+          <span className="text-2xl font-bold">{formatCurrency(totalWithInterest)}</span>
         </div>
 
         {canEdit && (

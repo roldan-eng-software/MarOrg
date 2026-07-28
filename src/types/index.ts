@@ -157,6 +157,15 @@ export interface PaymentInstallment {
   description: string;
   due_date: string;
   percentage: number;
+  payment_type: string;
+}
+
+export interface PaymentInterestRate {
+  id: string;
+  payment_type: string;
+  monthly_rate: number;
+  active: boolean;
+  created_at: string;
 }
 
 export interface BudgetImage {
