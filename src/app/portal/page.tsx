@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,11 +63,23 @@ const statusVariants: Record<string, "default" | "success" | "warning" | "danger
 };
 
 export default function PortalPage() {
-  const [budgetNumber, setBudgetNumber] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const searchParams = useSearchParams();
+  const initialBudget = searchParams.get("budget_number") || "";
+  const initialPhone = searchParams.get("phone") || "";
+  const [budgetNumber, setBudgetNumber] = useState(initialBudget);
+  const [customerPhone, setCustomerPhone] = useState(initialPhone);
   const [loading, setLoading] = useState(false);
   const [budgets, setBudgets] = useState<CustomerBudget[]>([]);
   const [selectedBudget, setSelectedBudget] = useState<CustomerBudget | null>(null);
+  const autoSearchDone = useRef(false);
+
+  useEffect(() => {
+    if (autoSearchDone.current) return;
+    if (!initialBudget && !initialPhone) return;
+    autoSearchDone.current = true;
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleSearch(fakeEvent);
+  }, []);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();

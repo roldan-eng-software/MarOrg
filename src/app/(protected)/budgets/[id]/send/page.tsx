@@ -122,9 +122,10 @@ export default function BudgetSendPage() {
       const customer = budget.customers;
       const phone = customer.phone.replace(/\D/g, "");
       const pdfUrl = `${window.location.origin}/api/pdf/${budgetId}`;
+      const portalUrl = `${window.location.origin}/portal?budget_number=${budget.budget_number}`;
 
       const text = encodeURIComponent(
-        `Olá ${customer.full_name}! Segue o orçamento ${budget.budget_number} no valor de R$ ${budget.total_amount.toFixed(2)}.\n\nAcesse o PDF: ${pdfUrl}\n\nRoldan Marcenaria`
+        `Olá ${customer.full_name}! Segue o orçamento ${budget.budget_number} no valor de R$ ${budget.total_amount.toFixed(2)}.\n\nAcesse o PDF: ${pdfUrl}\n\nAcompanhe seu orçamento: ${portalUrl}\n\nRoldan Marcenaria`
       );
 
       await supabase.from("communications").insert({
