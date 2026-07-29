@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,18 +24,18 @@ export default function BudgetSendPage() {
   const supabase = createClient();
   const budgetId = params.id as string;
 
-  useEffect(() => {
-    loadImages();
-  }, [budgetId]);
-
-  async function loadImages() {
+  const loadImages = useCallback(async () => {
     const { data } = await supabase
       .from("budget_images")
       .select("*")
       .eq("budget_id", budgetId)
       .order("sort_order");
     if (data) setImages(data);
-  }
+  }, [budgetId, supabase]);
+
+  useEffect(() => {
+    loadImages();
+  }, [loadImages]);
 
   async function handleUploadImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

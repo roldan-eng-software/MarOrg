@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -59,11 +59,7 @@ export default function BudgetViewPage() {
   const supabase = createClient();
   const budgetId = params.id as string;
 
-  useEffect(() => {
-    loadBudget();
-  }, [budgetId]);
-
-  async function loadBudget() {
+  const loadBudget = useCallback(async () => {
     try {
       const { data: budgetData, error: budgetError } = await supabase
         .from("budgets")
@@ -98,7 +94,11 @@ export default function BudgetViewPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [budgetId, router, supabase]);
+
+  useEffect(() => {
+    loadBudget();
+  }, [loadBudget]);
 
   function handleDownloadPdf() {
     window.open(`/api/pdf/${budgetId}`, "_blank");

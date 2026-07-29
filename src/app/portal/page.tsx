@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,15 +73,7 @@ export default function PortalPage() {
   const [selectedBudget, setSelectedBudget] = useState<CustomerBudget | null>(null);
   const autoSearchDone = useRef(false);
 
-  useEffect(() => {
-    if (autoSearchDone.current) return;
-    if (!initialBudget && !initialPhone) return;
-    autoSearchDone.current = true;
-    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-    handleSearch(fakeEvent);
-  }, []);
-
-  async function handleSearch(e: React.FormEvent) {
+  const handleSearch = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!budgetNumber.trim() && !customerPhone.trim()) {
       showToast("Informe o número do orçamento ou telefone", "error");
@@ -115,7 +107,15 @@ export default function PortalPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [budgetNumber, customerPhone]);
+
+  useEffect(() => {
+    if (autoSearchDone.current) return;
+    if (!initialBudget && !initialPhone) return;
+    autoSearchDone.current = true;
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleSearch(fakeEvent);
+  }, [initialBudget, initialPhone, handleSearch]);
 
   function handleViewBudget(budget: CustomerBudget) {
     setSelectedBudget(budget);

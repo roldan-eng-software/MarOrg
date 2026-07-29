@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -118,8 +118,7 @@ export default function BudgetNewPage() {
   const depositValue = totalAmount * ((depositPercentage ?? 0) / 100);
   const remaining = totalAmount - depositValue;
   const count = installmentCount ?? 1;
-  const installmentValue = count > 0 ? remaining / count : remaining;
-  const paymentTypes = watch("payment_types") || [];
+  const paymentTypes = useMemo(() => watch("payment_types") || [], [watch]);
 
   function getRateForType(type: string): number {
     const found = interestRates.find((r) => r.payment_type === type);

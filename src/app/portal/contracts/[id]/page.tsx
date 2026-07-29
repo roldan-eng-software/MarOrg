@@ -16,7 +16,12 @@ async function getContract(id: string) {
   return data;
 }
 
-export default async function ContractPortalPage({ params }: { params: { id: string } }) {
+interface ContractPortalPageProps {
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default async function ContractPortalPage({ params }: ContractPortalPageProps) {
   const contract = await getContract(params.id);
 
   return (

@@ -37,8 +37,6 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const supabase = await createClient();
 
   const now = new Date();
-  const currentMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const currentMonthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-31`;
 
   const [
     customersResult,

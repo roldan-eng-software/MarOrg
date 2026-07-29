@@ -79,11 +79,7 @@ export default function ServiceOrderDetailPage() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [generatingContract, setGeneratingContract] = useState(false);
 
-  useEffect(() => {
-    loadOrder();
-  }, [params.id]);
-
-  async function loadOrder() {
+  const loadOrder = useCallback(async () => {
     try {
       const data = await getServiceOrder(params.id as string);
       setOrder(data as OrderData);
@@ -102,7 +98,11 @@ export default function ServiceOrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [params.id]);
+
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
 
   async function handleSave() {
     if (!order) return;

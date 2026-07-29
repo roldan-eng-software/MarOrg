@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,9 +61,9 @@ export default function InventoryPage() {
 
   useEffect(() => {
     loadData();
-  }, [filterCategory, search]);
+  }, [loadData]);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [mats, statsData] = await Promise.all([
@@ -77,7 +77,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filterCategory, search]);
 
   async function handleCreateMaterial(e: React.FormEvent) {
     e.preventDefault();

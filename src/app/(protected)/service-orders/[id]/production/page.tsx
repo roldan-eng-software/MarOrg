@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,11 +46,7 @@ export default function ProductionPage() {
 
   const [consumptionValues, setConsumptionValues] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    loadOrder();
-  }, [params.id]);
-
-  async function loadOrder() {
+  const loadOrder = useCallback(async () => {
     try {
       const data = await getServiceOrder(params.id as string);
       setOrder(data as OrderData);
@@ -75,7 +71,11 @@ export default function ProductionPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [params.id]);
+
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
 
   async function handleConsume(linkId: string, materialId: string, materialName: string, unit: string, maxQty: number) {
     const key = `consume-${linkId}`;

@@ -174,14 +174,6 @@ const styles = StyleSheet.create({
   },
 });
 
-const COMPANY_DEFAULTS: CompanySettings = {
-  company_name: "Roldan Marcenaria",
-  company_phone: "",
-  company_address: "",
-  company_cnpj: "",
-  company_email: "",
-};
-
 function Header({ title, period, company }: { title: string; period: string; company: CompanySettings }) {
   return (
     <View style={styles.header}>

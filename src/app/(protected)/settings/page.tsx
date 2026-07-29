@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,11 +37,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const {
         data: { user },
@@ -69,7 +65,11 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [supabase]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   async function handleSaveSettings() {
     try {

@@ -6,7 +6,6 @@ import {
   updateInterestRate,
 } from "@/modules/payments/services/payments.actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showToast } from "@/components/ui/toast";
 import type { PaymentInterestRate } from "@/types";

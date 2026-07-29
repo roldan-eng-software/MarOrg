@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -105,7 +105,7 @@ export default function BudgetEditPage() {
   const installmentCount = watch("installment_count");
   const productionDays = watch("production_days") || 0;
 
-  useEffect(() => {
+  const loadBudget = useCallback(() => {
     Promise.all([
       getBudget(params.id as string),
       listCustomersServer(),
@@ -186,6 +186,10 @@ export default function BudgetEditPage() {
     }).finally(() => setFetching(false));
   }, [params.id, reset]);
 
+  useEffect(() => {
+    loadBudget();
+  }, [loadBudget]);
+
   const totalAmount = items?.reduce((sum, item) => {
     const qty = item.quantity || 0;
     const price = item.unit_price || 0;
@@ -198,14 +202,14 @@ export default function BudgetEditPage() {
   const depositValue = totalAmount * ((depositPercentage ?? 0) / 100);
   const remaining = totalAmount - depositValue;
   const count = installmentCount ?? 1;
-  const installmentValue = count > 0 ? remaining / count : remaining;
 
-  const paymentTypes = watch("payment_types") || [];
+  const paymentTypes = useMemo(() => watch("payment_types") || [], [watch]);
 
   function getRateForType(type: string): number {
     const found = interestRates.find((r) => r.payment_type === type);
     return found ? Number(found.monthly_rate) : 0;
   }
+
 
   function calculatePMT(pv: number, ratePercent: number, n: number): number {
     const r = ratePercent / 100;
