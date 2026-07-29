@@ -617,9 +617,16 @@ export default function BudgetEditPage() {
                       size="sm"
                       onClick={() => {
                         remove(index);
-                        const newMaterials = { ...itemMaterials };
-                        delete newMaterials[index];
-                        setItemMaterials(newMaterials);
+                        const keys = Object.keys(itemMaterials).map(Number).sort((a, b) => a - b);
+                        const reindexed: Record<number, ItemMaterial[]> = {};
+                        let newIdx = 0;
+                        for (const oldIdx of keys) {
+                          if (oldIdx !== index) {
+                            reindexed[newIdx] = itemMaterials[oldIdx];
+                            newIdx++;
+                          }
+                        }
+                        setItemMaterials(reindexed);
                       }}
                     >
                       Remover
