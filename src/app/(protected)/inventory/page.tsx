@@ -59,10 +59,6 @@ export default function InventoryPage() {
   const [movQty, setMovQty] = useState(0);
   const [movReason, setMovReason] = useState("");
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -78,6 +74,10 @@ export default function InventoryPage() {
       setLoading(false);
     }
   }, [filterCategory, search]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   async function handleCreateMaterial(e: React.FormEvent) {
     e.preventDefault();
