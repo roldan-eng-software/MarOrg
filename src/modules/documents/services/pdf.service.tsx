@@ -154,12 +154,12 @@ const styles = StyleSheet.create({
   tableCellDesc: {
     fontSize: 9,
     color: COLORS.text,
-    flex: 4,
+    flex: 3,
   },
   tableCellDim: {
     fontSize: 8,
     color: COLORS.textLight,
-    flex: 2,
+    flex: 1.5,
   },
   tableCellQty: {
     fontSize: 9,
@@ -170,7 +170,13 @@ const styles = StyleSheet.create({
   tableCellPrice: {
     fontSize: 9,
     color: COLORS.text,
-    flex: 2,
+    flex: 1.5,
+    textAlign: "right",
+  },
+  tableCellDiscount: {
+    fontSize: 9,
+    color: "#C0392B",
+    flex: 1.5,
     textAlign: "right",
   },
   itemDetails: {
@@ -579,17 +585,17 @@ export function BudgetPDF({
           <Text style={styles.sectionTitle}>Produtos e Serviços</Text>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, { flex: 4 }]}>
+              <Text style={[styles.tableHeaderText, { flex: 3 }]}>
                 Descrição
               </Text>
-              <Text style={[styles.tableHeaderText, { flex: 2 }]}>
+              <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>
                 Dimensões
               </Text>
               <Text style={[styles.tableHeaderText, { flex: 1 }]}>Qtd</Text>
               <Text
                 style={[
                   styles.tableHeaderText,
-                  { flex: 2, textAlign: "right" },
+                  { flex: 1.5, textAlign: "right" },
                 ]}
               >
                 Unitário
@@ -597,7 +603,15 @@ export function BudgetPDF({
               <Text
                 style={[
                   styles.tableHeaderText,
-                  { flex: 2, textAlign: "right" },
+                  { flex: 1.5, textAlign: "right" },
+                ]}
+              >
+                Desconto
+              </Text>
+              <Text
+                style={[
+                  styles.tableHeaderText,
+                  { flex: 1.5, textAlign: "right" },
                 ]}
               >
                 Total
@@ -634,6 +648,9 @@ export function BudgetPDF({
                 </Text>
                 <Text style={styles.tableCellPrice}>
                   {formatCurrency(item.unit_price)}
+                </Text>
+                <Text style={styles.tableCellDiscount}>
+                  {item.discount > 0 ? `-${formatCurrency(item.discount)}` : "-"}
                 </Text>
                 <Text style={styles.tableCellPrice}>
                   {formatCurrency(item.total_price)}
