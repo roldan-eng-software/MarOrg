@@ -16,20 +16,15 @@ async function getContract(id: string) {
   return data;
 }
 
-interface ContractPortalPageProps {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
-
-export default async function ContractPortalPage({ params }: ContractPortalPageProps) {
-  const contract = await getContract(params.id);
+export default async function ContractPortalPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const contract = await getContract(id);
 
   return (
     <main className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
       <div className="bg-white p-8 rounded-lg shadow-md">
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">Contrato de Prestação de Serviços</h1>
         
-        {/* Renderiza o conteúdo do contrato. O ideal seria usar uma lib como 'marked' para converter para HTML */}
         <div 
           className="prose prose-sm sm:prose-base max-w-none"
           style={{ whiteSpace: 'pre-wrap' }}
