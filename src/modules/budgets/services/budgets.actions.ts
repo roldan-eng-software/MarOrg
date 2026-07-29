@@ -251,10 +251,19 @@ export async function updateBudget(
   }
 
   if (items) {
-    await supabase.from("budget_item_materials").delete().in("budget_item_id",
-      (await supabase.from("budget_items").select("id").eq("budget_id", id)).data?.map((i) => i.id) ?? []
-    );
-    await supabase.from("budget_items").delete().eq("budget_id", id);
+    const itemIds = (await supabase.from("budget_items").select("id").eq("budget_id", id)).data?.map((i) => i.id) ?? [];
+    if (itemIds.length > 0) {
+      const { error: matError } = await supabase.from("budget_item_materials").delete().in("budget_item_id", itemIds);
+      if (matError) {
+        console.error("Error deleting budget item materials:", matError.message);
+        throw new Error("Erro ao remover materiais dos itens");
+      }
+    }
+    const { error: deleteError } = await supabase.from("budget_items").delete().eq("budget_id", id);
+    if (deleteError) {
+      console.error("Error deleting budget items:", deleteError.message);
+      throw new Error("Erro ao remover itens antigos do orçamento");
+    }
 
     if (items.length > 0) {
       const { data: insertedItems, error: itemsError } = await supabase
@@ -296,7 +305,11 @@ export async function updateBudget(
   }
 
   if (budgetCosts) {
-    await supabase.from("budget_costs").delete().eq("budget_id", id);
+    const { error: deleteCostsError } = await supabase.from("budget_costs").delete().eq("budget_id", id);
+    if (deleteCostsError) {
+      console.error("Error deleting budget costs:", deleteCostsError.message);
+      throw new Error("Erro ao remover custos antigos do orçamento");
+    }
 
     if (budgetCosts.length > 0) {
       const { error: costsError } = await supabase.from("budget_costs").insert(
