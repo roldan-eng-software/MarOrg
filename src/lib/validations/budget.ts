@@ -27,6 +27,7 @@ export const budgetSchema = z.object({
   validity_days: z.coerce.number().min(1).max(365).default(30),
   delivery_days: z.coerce.number().min(0).max(365).default(30),
   production_days: z.coerce.number().min(0).max(365).default(0),
+  warranty_months: z.coerce.number().min(0).max(120).optional(),
   notes_internal: z.string().optional().or(z.literal("")),
   notes_client: z.string().optional().or(z.literal("")),
   payment_conditions: z.string().optional().or(z.literal("")),

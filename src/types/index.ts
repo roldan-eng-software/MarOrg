@@ -14,6 +14,16 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface Contract {
+  id: string;
+  service_order_id: string;
+  customer_id: string;
+  template_path: string;
+  content_final: string;
+  status: 'draft' | 'generated' | 'sent' | 'signed';
+  created_at: string;
+}
+
 export interface Customer {
   id: string;
   full_name: string;
@@ -21,6 +31,10 @@ export interface Customer {
   phone: string;
   phone_secondary: string | null;
   cpf_cnpj: string | null;
+  nationality: string | null;
+  marital_status: string | null;
+  profession: string | null;
+  rg: string | null;
   address_street: string | null;
   address_number: string | null;
   address_complement: string | null;
@@ -52,6 +66,7 @@ export interface Budget {
   validity_days: number;
   delivery_days: number;
   production_days: number;
+  warranty_months: number | null;
   notes_internal: string | null;
   notes_client: string | null;
   total_amount: number;

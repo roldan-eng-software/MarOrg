@@ -126,6 +126,30 @@ export default function CustomerNewPage() {
               label="CPF/CNPJ"
               {...register("cpf_cnpj")}
             />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                id="nationality"
+                label="Nacionalidade"
+                {...register("nationality")}
+              />
+              <Input
+                id="marital_status"
+                label="Estado Civil"
+                {...register("marital_status")}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <Input
+                id="profession"
+                label="Profissão"
+                {...register("profession")}
+              />
+              <Input
+                id="rg"
+                label="RG"
+                {...register("rg")}
+              />
+            </div>
           </CardContent>
         </Card>
 

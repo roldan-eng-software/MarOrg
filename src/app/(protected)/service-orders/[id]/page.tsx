@@ -16,7 +16,11 @@ import {
   hasFinancialTransactions,
   createFinancialTransactionsFromOS,
 } from "@/modules/service-orders/services/service-orders.actions";
-import type { ServiceOrder, ServiceOrderItem, Customer } from "@/types";
+import {
+  generateContractForServiceOrder,
+  getContractForServiceOrder
+} from "@/modules/contracts/services/contracts.actions";
+import type { ServiceOrder, ServiceOrderItem, Customer, Contract } from "@/types";
 
 type OrderData = ServiceOrder & {
   customers: Customer;
@@ -72,6 +76,8 @@ export default function ServiceOrderDetailPage() {
   const [notesProduction, setNotesProduction] = useState("");
   const [hasTransactions, setHasTransactions] = useState(false);
   const [generatingFinance, setGeneratingFinance] = useState(false);
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [generatingContract, setGeneratingContract] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -89,6 +95,8 @@ export default function ServiceOrderDetailPage() {
       setNotesProduction(data.notes_production ?? "");
       const transactionsExist = await hasFinancialTransactions(params.id as string);
       setHasTransactions(transactionsExist);
+      const existingContract = await getContractForServiceOrder(params.id as string);
+      setContract(existingContract);
     } catch {
       showToast("Erro ao carregar ordem de serviço", "error");
     } finally {
@@ -144,6 +152,21 @@ export default function ServiceOrderDetailPage() {
       showToast(message, "error");
     } finally {
       setGeneratingFinance(false);
+    }
+  }
+
+  async function handleGenerateContract() {
+    if (!order) return;
+    try {
+      setGeneratingContract(true);
+      const newContract = await generateContractForServiceOrder(order.id);
+      setContract(newContract);
+      showToast("Contrato gerado com sucesso!", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao gerar contrato";
+      showToast(message, "error");
+    } finally {
+      setGeneratingContract(false);
     }
   }
 
@@ -372,6 +395,48 @@ export default function ServiceOrderDetailPage() {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Contrato</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {contract ? (
+            <div className="space-y-3">
+              <p className="text-sm text-green-700 bg-green-50 rounded px-3 py-2">
+                Contrato gerado em {formatDate(contract.created_at)}.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="primary"
+                  onClick={() => window.open(`/portal/contracts/${contract.id}`, '_blank')}
+                >
+                  Ver no Portal
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const message = `Olá, ${order.customers.full_name}! Segue o link para o seu contrato: ${window.location.origin}/portal/contracts/${contract.id}`;
+                    window.open(`https://wa.me/${order.customers.phone}?text=${encodeURIComponent(message)}`, '_blank');
+                  }}
+                >
+                  Enviar por WhatsApp
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-[#8B7A6B] mb-3">Nenhum contrato gerado para esta ordem de serviço.</p>
+              <Button
+                onClick={handleGenerateContract}
+                disabled={generatingContract}
+              >
+                {generatingContract ? "Gerando..." : "Gerar Contrato"}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

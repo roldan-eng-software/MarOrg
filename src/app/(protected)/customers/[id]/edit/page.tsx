@@ -69,6 +69,10 @@ export default function CustomerEditPage() {
           phone: customer.phone,
           phone_secondary: customer.phone_secondary ?? "",
           cpf_cnpj: customer.cpf_cnpj ?? "",
+          nationality: customer.nationality ?? "",
+          marital_status: customer.marital_status ?? "",
+          profession: customer.profession ?? "",
+          rg: customer.rg ?? "",
           address_street: customer.address_street ?? "",
           address_number: customer.address_number ?? "",
           address_complement: customer.address_complement ?? "",
@@ -91,6 +95,10 @@ export default function CustomerEditPage() {
         email: data.email || null,
         phone_secondary: data.phone_secondary || null,
         cpf_cnpj: data.cpf_cnpj || null,
+        nationality: data.nationality || null,
+        marital_status: data.marital_status || null,
+        profession: data.profession || null,
+        rg: data.rg || null,
         address_street: data.address_street || null,
         address_number: data.address_number || null,
         address_complement: data.address_complement || null,
@@ -156,6 +164,30 @@ export default function CustomerEditPage() {
               label="CPF/CNPJ"
               {...register("cpf_cnpj")}
             />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                id="nationality"
+                label="Nacionalidade"
+                {...register("nationality")}
+              />
+              <Input
+                id="marital_status"
+                label="Estado Civil"
+                {...register("marital_status")}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <Input
+                id="profession"
+                label="Profissão"
+                {...register("profession")}
+              />
+              <Input
+                id="rg"
+                label="RG"
+                {...register("rg")}
+              />
+            </div>
           </CardContent>
         </Card>
 

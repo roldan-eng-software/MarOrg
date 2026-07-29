@@ -133,6 +133,7 @@ export default function BudgetEditPage() {
         validity_days: budget.validity_days,
         delivery_days: budget.delivery_days ?? 30,
         production_days: budget.production_days ?? 0,
+        warranty_months: budget.warranty_months ?? undefined,
         notes_internal: budget.notes_internal ?? "",
         notes_client: budget.notes_client ?? "",
         payment_conditions: budget.payment_conditions ?? "",
@@ -423,6 +424,7 @@ export default function BudgetEditPage() {
           validity_days: data.validity_days,
           delivery_days: data.delivery_days,
           production_days: Number(data.production_days ?? 0),
+          warranty_months: data.warranty_months || null,
           notes_internal: data.notes_internal || null,
           notes_client: data.notes_client || null,
           payment_conditions: data.payment_conditions || null,
@@ -545,6 +547,13 @@ export default function BudgetEditPage() {
               label="Prazo de Entrega (dias)"
               type="number"
               {...register("delivery_days")}
+              disabled={!canEdit}
+            />
+            <Input
+              id="warranty_months"
+              label="Garantia (meses)"
+              type="number"
+              {...register("warranty_months")}
               disabled={!canEdit}
             />
             <Input

@@ -338,11 +338,12 @@ export default function BudgetNewPage() {
       await createBudget(
         {
           customer_id: data.customer_id,
-          status: "rascunho",
-          validity_days: data.validity_days,
-          delivery_days: data.delivery_days,
-          production_days: Number(data.production_days ?? 0),
-          notes_internal: data.notes_internal || null,
+           status: "rascunho",
+           validity_days: data.validity_days,
+           delivery_days: data.delivery_days,
+           production_days: Number(data.production_days ?? 0),
+           warranty_months: data.warranty_months || null,
+           notes_internal: data.notes_internal || null,
           notes_client: data.notes_client || null,
           payment_conditions: data.payment_conditions || null,
           payment_installments: installmentDetails.map((d) => ({
@@ -427,6 +428,12 @@ export default function BudgetNewPage() {
               label="Prazo de Entrega (dias)"
               type="number"
               {...register("delivery_days")}
+            />
+            <Input
+              id="warranty_months"
+              label="Garantia (meses)"
+              type="number"
+              {...register("warranty_months")}
             />
             <Input
               id="production_days"
