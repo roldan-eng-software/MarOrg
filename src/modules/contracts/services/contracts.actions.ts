@@ -7,6 +7,7 @@ import { getServiceOrder } from '@/modules/service-orders/services/service-order
 import { getBudget } from '@/modules/budgets/services/budgets.actions';
 import { getCustomerServer } from '@/modules/customers/services/customers.actions';
 import { getProfile } from '@/modules/profiles/services/profiles.actions';
+import type { BudgetItem } from "@/types";
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 
 type Placeholders = {
@@ -36,8 +37,8 @@ async function getContractTemplate(serviceOrderId: string): Promise<{ templatePa
   if (!budget) throw new Error("Orçamento não encontrado");
 
   // Decide o template com base nos itens
-  const hasMobiliario = budget.items.some(item => item.item_type === 'mobiliario');
-  const hasServico = budget.items.some(item => item.item_type === 'servico');
+  const hasMobiliario = budget.items.some((item: BudgetItem) => item.item_type === 'mobiliario');
+  const hasServico = budget.items.some((item: BudgetItem) => item.item_type === 'servico');
 
   let templateName = '';
   // Regra: se tiver apenas serviço, é contrato 3. Se tiver mobiliario (com ou sem serviço junto), é contrato 1 ou 2.
@@ -106,7 +107,7 @@ async function fillPlaceholders(templateContent: string, serviceOrderId: string,
 }
 
 export async function generateContractForServiceOrder(serviceOrderId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { templatePath, placeholders } = await getContractTemplate(serviceOrderId);
   
@@ -137,7 +138,7 @@ export async function generateContractForServiceOrder(serviceOrderId: string) {
 }
 
 export async function getContractForServiceOrder(serviceOrderId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('contracts')
     .select('*')
