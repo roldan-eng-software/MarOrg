@@ -81,7 +81,7 @@ async function fillPlaceholders(templateContent: string, serviceOrderId: string,
     customer.address_zip,
   ].filter(Boolean).join(', ');
 
-  const allPlaceholders: Placeholders = {
+  const allPlaceholders = {
     'cliente.nome': customer.full_name || '',
     'cliente.nacionalidade': customer.nationality || '',
     'cliente.estado_civil': customer.marital_status || '',
@@ -94,7 +94,7 @@ async function fillPlaceholders(templateContent: string, serviceOrderId: string,
     'empresa.endereco': profile?.settings?.company_address || '',
     'data_assinatura': formatDate(new Date()),
     ...customPlaceholders,
-  };
+  } as Placeholders;
 
   let finalContent = templateContent;
   for (const [key, value] of Object.entries(allPlaceholders)) {
