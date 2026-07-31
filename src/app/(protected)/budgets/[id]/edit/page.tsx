@@ -1136,9 +1136,9 @@ export default function BudgetEditPage() {
                         className="flex-1 rounded border border-[#D4C4B0] bg-white px-2 py-1 text-sm text-[#3D2519]"
                       >
                         <option value="">Selecione o tipo</option>
-                        {paymentTypes.map((type: string) => (
-                          <option key={type} value={type}>
-                            {type} {getRateForType(type) > 0 ? `(${getRateForType(type)}%/mês)` : "(sem juros)"}
+                        {interestRates.map((rate) => (
+                          <option key={rate.payment_type} value={rate.payment_type}>
+                            {rate.payment_type} {Number(rate.monthly_rate) > 0 ? `(${rate.monthly_rate}%/mês)` : "(sem juros)"}
                           </option>
                         ))}
                       </select>
