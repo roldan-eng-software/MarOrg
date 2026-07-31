@@ -5,17 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showToast } from "@/components/ui/toast";
 import { deleteBudgetImage } from "@/modules/images/services/images.actions";
+import { generateShareToken } from "@/modules/budgets/services/budgets.actions";
 import type { BudgetImage } from "@/types";
 
 export default function BudgetSendPage() {
   const params = useParams();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<BudgetImage[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -121,7 +119,9 @@ export default function BudgetSendPage() {
 
       const customer = budget.customers;
       const phone = customer.phone.replace(/\D/g, "");
-      const pdfUrl = `${window.location.origin}/api/pdf/${budgetId}`;
+
+      const token = await generateShareToken(budgetId, "budget");
+      const pdfUrl = `${window.location.origin}/api/shared/pdf/${token}`;
       const portalUrl = `${window.location.origin}/portal?budget_number=${budget.budget_number}`;
 
       const text = encodeURIComponent(
@@ -143,27 +143,6 @@ export default function BudgetSendPage() {
       router.push("/budgets");
     } catch {
       showToast("Erro ao enviar", "error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSendEmail() {
-    if (!email) {
-      showToast("Informe o e-mail", "error");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const response = await fetch(`/api/pdf/${budgetId}`);
-      if (!response.ok) throw new Error("PDF generation failed");
-
-      showToast("E-mail enviado com sucesso", "success");
-      router.push("/budgets");
-    } catch {
-      showToast("Erro ao enviar e-mail", "error");
     } finally {
       setLoading(false);
     }
@@ -280,38 +259,6 @@ export default function BudgetSendPage() {
           </p>
           <Button onClick={handleSendWhatsApp} disabled={loading} className="w-full">
             Enviar via WhatsApp
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Email */}
-      <Card>
-        <CardHeader>
-          <CardTitle>E-mail</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            id="email"
-            label="E-mail do cliente"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="cliente@email.com"
-          />
-          <Textarea
-            id="message"
-            label="Mensagem (opcional)"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Segue seu orçamento..."
-          />
-          <Button
-            variant="secondary"
-            onClick={handleSendEmail}
-            disabled={loading}
-            className="w-full"
-          >
-            Enviar via E-mail
           </Button>
         </CardContent>
       </Card>

@@ -350,3 +350,24 @@ export async function updateBudgetStatus(
     throw new Error("Erro ao atualizar status do orçamento");
   }
 }
+
+export async function generateShareToken(entityId: string, entityType: "budget" | "contract" = "budget") {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("share_tokens")
+    .insert({
+      entity_type: entityType,
+      entity_id: entityId,
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    .select("token")
+    .single();
+
+  if (error) {
+    console.error("Error generating share token:", error.message);
+    throw new Error("Erro ao gerar link de acesso");
+  }
+
+  return data.token as string;
+}

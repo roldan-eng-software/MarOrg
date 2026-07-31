@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -21,6 +21,76 @@ function checkRateLimit(ip: string): boolean {
 
   record.count++;
   return true;
+}
+
+export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: "Muitas requisições. Tente novamente em 1 minuto." },
+      { status: 429 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const { budget_id, budget_number, phone } = body;
+
+    if (!budget_id) {
+      return NextResponse.json({ error: "ID do orçamento é obrigatório" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    let query = supabase
+      .from("budgets")
+      .select("id, budget_number, customers!inner(phone)")
+      .eq("id", budget_id)
+      .in("status", ["em_analise", "aprovado", "recusado", "vencido", "revisado", "concluido"])
+      .single();
+
+    const { data: budget, error } = await query;
+
+    if (error || !budget) {
+      return NextResponse.json({ error: "Orçamento não encontrado" }, { status: 404 });
+    }
+
+    if (budget_number) {
+      const sanitizedNumber = budget_number.trim().replace(/[^A-Za-z0-9\-]/g, "").toUpperCase();
+      if (budget.budget_number !== sanitizedNumber) {
+        return NextResponse.json({ error: "Dados não autorizado" }, { status: 403 });
+      }
+    }
+
+    if (phone) {
+      const sanitizedPhone = phone.replace(/\D/g, "");
+      const cust = Array.isArray(budget.customers) ? budget.customers[0] : (budget.customers as Record<string, unknown>);
+      const customerPhone = ((cust as { phone?: string })?.phone || "").replace(/\D/g, "");
+      if (!customerPhone.includes(sanitizedPhone) && !sanitizedPhone.includes(customerPhone)) {
+        return NextResponse.json({ error: "Dados não autorizado" }, { status: 403 });
+      }
+    }
+
+    const { data: tokenData, error: tokenError } = await supabase
+      .from("share_tokens")
+      .insert({
+        entity_type: "budget",
+        entity_id: budget_id,
+      })
+      .select("token")
+      .single();
+
+    if (tokenError) {
+      return NextResponse.json({ error: "Erro ao gerar link" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      token: tokenData.token,
+      url: `${request.nextUrl.origin}/api/shared/pdf/${tokenData.token}`,
+    });
+  } catch {
+    return NextResponse.json({ error: "Erro ao processar requisição" }, { status: 500 });
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -55,11 +125,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   let query = supabase
     .from("budgets")
-    .select("*, customers(full_name, phone), budget_items(*)")
+    .select("*, customers!inner(full_name, phone), budget_items(*)")
     .in("status", ["em_analise", "aprovado", "recusado", "vencido", "revisado", "concluido"])
     .order("created_at", { ascending: false });
 
@@ -73,7 +143,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Erro ao buscar orçamentos" }, { status: 500 });
   }
 
-  // Filter by phone if provided (after fetching, since phone is in customers table)
   let filteredBudgets = budgets || [];
 
   if (sanitizedPhone && !sanitizedBudgetNumber) {
@@ -85,10 +154,8 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Limit results to prevent enumeration
   const limitedBudgets = filteredBudgets.slice(0, 5);
 
-  // Format the response (hide sensitive data)
   const formattedBudgets = limitedBudgets.map((b) => ({
     id: b.id,
     budget_number: b.budget_number,

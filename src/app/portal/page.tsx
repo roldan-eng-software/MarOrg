@@ -240,6 +240,40 @@ export default function PortalPage() {
             </Card>
           )}
 
+          <Card>
+            <CardContent className="pt-6">
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/portal/budgets", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        budget_id: selectedBudget.id,
+                        budget_number: selectedBudget.budget_number,
+                        phone: budgetNumber || customerPhone || undefined,
+                      }),
+                    });
+
+                    if (!res.ok) {
+                      const err = await res.json();
+                      showToast(err.error || "Erro ao gerar PDF", "error");
+                      return;
+                    }
+
+                    const { url } = await res.json();
+                    window.open(url, "_blank");
+                  } catch {
+                    showToast("Erro ao gerar PDF", "error");
+                  }
+                }}
+              >
+                Baixar PDF
+              </Button>
+            </CardContent>
+          </Card>
+
           {selectedBudget.notes_client && (
             <Card>
               <CardHeader>
