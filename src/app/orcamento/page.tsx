@@ -77,6 +77,7 @@ export default function OrcamentoPage() {
       ferragens: [],
       projeto_3d: false,
       visita_tecnica: false,
+      privacidade: false,
     },
   });
 
@@ -478,11 +479,8 @@ export default function OrcamentoPage() {
               <label className="flex items-start gap-2 text-sm text-[#3D2519] cursor-pointer">
                 <input
                   type="checkbox"
+                  {...register("privacidade")}
                   className="accent-[#5B3A29] mt-0.5"
-                  onChange={(e) => {
-                    const input = document.querySelector('[name="privacidade"]') as HTMLInputElement;
-                    if (input) input.value = String(e.target.checked);
-                  }}
                 />
                 <span>
                   Concordo com a Política de Privacidade e autorizo o uso dos meus dados para

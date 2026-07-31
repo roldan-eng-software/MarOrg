@@ -38,11 +38,12 @@ export const budgetRequestSchema = z.object({
   faixa_orcamento: z.string().optional(),
   projeto_3d: z.boolean().default(false),
   visita_tecnica: z.boolean().default(false),
-  privacidade: z.literal(true, {
-    errorMap: () => ({
+  privacidade: z
+    .boolean()
+    .refine((val) => val === true, {
       message: "Você precisa concordar com a política de privacidade",
-    }),
-  }),
+    })
+    .default(false),
 });
 
 export type BudgetRequestFormData = z.infer<typeof budgetRequestSchema>;
