@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
@@ -9,6 +10,7 @@ import {
   getDashboardMetrics,
   type DashboardMetrics,
 } from "@/modules/dashboard/services/dashboard.actions";
+import { getPendingRequests } from "@/modules/budget-requests/services/budget-requests.actions";
 
 const statusLabels: Record<string, string> = {
   rascunho: "Rascunho",
@@ -88,8 +90,10 @@ function BarChart({ data }: { data: { month: string; revenue: number; expenses: 
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -102,6 +106,8 @@ export default function DashboardPage() {
       }
     }
     load();
+
+    getPendingRequests().then((r) => setPendingRequests(r.total));
   }, []);
 
   if (loading) {
@@ -120,6 +126,33 @@ export default function DashboardPage() {
           Atualizar
         </Button>
       </div>
+
+      {pendingRequests > 0 && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📋</span>
+                <div>
+                  <p className="font-semibold text-[#3D2519]">
+                    {pendingRequests} novo{pendingRequests > 1 ? "s" : ""} pedido
+                    {pendingRequests > 1 ? "s" : ""} de orçamento
+                  </p>
+                  <p className="text-sm text-[#8B7A6B]">
+                    Clientes preencheram o formulário online e aguardam retorno
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => router.push("/budget-requests")}
+              >
+                Ver Pedidos
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Receita Mensal" value={formatCurrency(metrics.monthlyRevenue)} icon="📈" />

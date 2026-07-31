@@ -340,6 +340,32 @@ export interface Purchase {
   updated_at: string;
 }
 
+export interface BudgetRequest {
+  id: string;
+  request_number: string;
+  status: "pendente" | "convertido";
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string;
+  preferred_channel: "whatsapp" | "email" | null;
+  furniture_type: string;
+  furniture_other: string | null;
+  environment: string;
+  width_cm: number | null;
+  height_cm: number | null;
+  depth_cm: number | null;
+  materials: string[];
+  hardware: string[];
+  additional_description: string | null;
+  budget_range: string | null;
+  needs_3d_project: boolean;
+  needs_technical_visit: boolean;
+  image_urls: string[];
+  created_at: string;
+  converted_at: string | null;
+  converted_budget_id: string | null;
+}
+
 export interface ScheduleEvent {
   id: string;
   title: string;

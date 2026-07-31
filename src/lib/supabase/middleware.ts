@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Allow public routes
-  const publicPaths = ["/login", "/portal", "/api/portal", "/api/shared", "/api/health"];
+  const publicPaths = ["/login", "/portal", "/api/portal", "/api/shared", "/api/health", "/orcamento", "/api/budget-requests"];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
 
   if (!user && !isPublic) {
