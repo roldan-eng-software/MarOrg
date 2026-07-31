@@ -42,14 +42,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    let query = supabase
+    const { data: budget, error } = await supabase
       .from("budgets")
       .select("id, budget_number, customers!inner(phone)")
       .eq("id", budget_id)
       .in("status", ["em_analise", "aprovado", "recusado", "vencido", "revisado", "concluido"])
       .single();
-
-    const { data: budget, error } = await query;
 
     if (error || !budget) {
       return NextResponse.json({ error: "Orçamento não encontrado" }, { status: 404 });
