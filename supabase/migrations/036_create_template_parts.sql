@@ -1,4 +1,4 @@
-CREATE TABLE furniture_template_parts (
+CREATE TABLE IF NOT EXISTS furniture_template_parts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   template_id UUID NOT NULL REFERENCES furniture_templates(id) ON DELETE CASCADE,
   part_type TEXT NOT NULL CHECK (part_type IN ('mdf', 'fita_borda', 'ferragem', 'mao_obra')),
@@ -14,8 +14,21 @@ CREATE TABLE furniture_template_parts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_template_parts_template ON furniture_template_parts (template_id);
-CREATE INDEX idx_template_parts_material ON furniture_template_parts (material_id);
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS template_id UUID NOT NULL REFERENCES furniture_templates(id) ON DELETE CASCADE;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS part_type TEXT NOT NULL CHECK (part_type IN ('mdf', 'fita_borda', 'ferragem', 'mao_obra'));
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS material_id UUID REFERENCES materials(id) ON DELETE SET NULL;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS name TEXT NOT NULL;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS width_mm NUMERIC;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS height_mm NUMERIC;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS depth_mm NUMERIC;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS quantity NUMERIC(10,3) NOT NULL DEFAULT 1;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS has_edgeband BOOLEAN DEFAULT false;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS edgeband_sides JSONB DEFAULT '["all"]';
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+ALTER TABLE furniture_template_parts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+CREATE INDEX IF NOT EXISTS idx_template_parts_template ON furniture_template_parts (template_id);
+CREATE INDEX IF NOT EXISTS idx_template_parts_material ON furniture_template_parts (material_id);
 
 ALTER TABLE furniture_template_parts ENABLE ROW LEVEL SECURITY;
 
