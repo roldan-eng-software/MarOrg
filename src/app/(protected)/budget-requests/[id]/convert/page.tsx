@@ -6,12 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { showToast } from "@/components/ui/toast";
+import { CostBreakdown } from "@/components/cost-breakdown";
 import { formatDate } from "@/lib/utils/format";
 import {
   getBudgetRequest,
+  getBudgetRequestEstimation,
   convertBudgetRequest,
 } from "@/modules/budget-requests/services/budget-requests.actions";
-import type { BudgetRequest } from "@/types";
+import type { BudgetRequest, TemplateCostBreakdown } from "@/types";
 
 const MATERIAL_LABELS: Record<string, string> = {
   mdf_branco: "MDF branco",
@@ -29,11 +31,22 @@ export default function ConvertBudgetRequestPage() {
   const [request, setRequest] = useState<BudgetRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [converting, setConverting] = useState(false);
+  const [estimation, setEstimation] = useState<{
+    breakdown: TemplateCostBreakdown | null;
+    templateName: string | null;
+    loading: boolean;
+  }>({ breakdown: null, templateName: null, loading: true });
 
   useEffect(() => {
     getBudgetRequest(id)
       .then(setRequest)
       .finally(() => setLoading(false));
+
+    getBudgetRequestEstimation(id)
+      .then(({ breakdown, templateName }) =>
+        setEstimation({ breakdown, templateName, loading: false })
+      )
+      .catch(() => setEstimation((s) => ({ ...s, loading: false })));
   }, [id]);
 
   async function handleConvert() {
@@ -177,6 +190,15 @@ export default function ConvertBudgetRequestPage() {
               </p>
             </div>
           </div>
+
+          {estimation.templateName && (
+            <div>
+              <p className="text-sm font-medium text-[#3D2519]">Template utilizado</p>
+              <p className="text-[#8B7A6B]">{estimation.templateName}</p>
+            </div>
+          )}
+
+          <CostBreakdown breakdown={estimation.breakdown} loading={estimation.loading} />
 
           <Button
             onClick={handleConvert}

@@ -2,7 +2,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import type { BudgetRequest } from "@/types";
+import { estimateBudgetRequestCost } from "@/modules/pricing/services/pricing.engine";
+import type { BudgetRequest, TemplateCostBreakdown } from "@/types";
 
 export async function getPendingRequests(): Promise<{ requests: BudgetRequest[]; total: number }> {
   const supabase = await createClient();
@@ -47,6 +48,30 @@ export async function getBudgetRequest(id: string): Promise<BudgetRequest | null
   }
 
   return data as BudgetRequest;
+}
+
+export async function getBudgetRequestEstimation(
+  id: string
+): Promise<{ breakdown: TemplateCostBreakdown | null; templateName: string | null }> {
+  const supabase = await createClient();
+
+  const { data: req, error } = await supabase
+    .from("budget_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !req) {
+    return { breakdown: null, templateName: null };
+  }
+
+  const estimation = await estimateBudgetRequestCost(req as BudgetRequest);
+
+  if (estimation.breakdown.totalCost === 0) {
+    return { breakdown: null, templateName: null };
+  }
+
+  return { breakdown: estimation.breakdown, templateName: estimation.templateName };
 }
 
 export async function convertBudgetRequest(id: string): Promise<string> {
@@ -134,6 +159,10 @@ export async function convertBudgetRequest(id: string): Promise<string> {
     notesClient += (notesClient ? "\n\n" : "") + `Preferências de ferragens: ${hardwareStr}`;
   }
 
+  const estimation = await estimateBudgetRequestCost(req);
+  const rawMaterialCost = estimation.breakdown.totalCost;
+  const hardwareItems = estimation.breakdown.details.hardwareItems;
+
   const { data: budget, error: budgetError } = await adminClient
     .from("budgets")
     .insert({
@@ -149,7 +178,7 @@ export async function convertBudgetRequest(id: string): Promise<string> {
       notes_client: notesClient || null,
       total_amount: 0,
       created_by: user.id,
-      raw_material_cost: 0,
+      raw_material_cost: rawMaterialCost,
       overhead_cost: 0,
       profit_margin: 0,
       payment_installments: [],
@@ -183,6 +212,35 @@ export async function convertBudgetRequest(id: string): Promise<string> {
 
   if (itemError) {
     throw new Error("Erro ao criar item do orçamento");
+  }
+
+  if (rawMaterialCost > 0) {
+    const estimatedItems = hardwareItems.map((item, index) => ({
+      budget_id: budget.id,
+      item_type: "servico" as const,
+      description: `${item.quantity}x ${item.name} (custo estimado)`,
+      material: null,
+      width_cm: null,
+      depth_cm: null,
+      height_cm: null,
+      unit: "un",
+      quantity: item.quantity,
+      unit_price: item.quantity > 0 ? item.cost / item.quantity : 0,
+      discount: 0,
+      total_price: item.cost,
+      notes: null,
+      sort_order: index + 1,
+    }));
+
+    if (estimatedItems.length > 0) {
+      const { error: estimatedError } = await adminClient
+        .from("budget_items")
+        .insert(estimatedItems);
+
+      if (estimatedError) {
+        console.error("Erro ao criar itens estimados:", estimatedError.message);
+      }
+    }
   }
 
   if (req.image_urls && req.image_urls.length > 0) {
