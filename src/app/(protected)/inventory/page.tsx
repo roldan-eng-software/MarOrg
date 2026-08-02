@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import {
   listMaterials,
   createMaterial,
+  updateMaterial,
   deleteMaterial,
   registerMovement,
   getInventoryStats,
@@ -60,6 +61,8 @@ export default function InventoryPage() {
   const [newPricePerUnit, setNewPricePerUnit] = useState<number | undefined>();
   const [newRollLength, setNewRollLength] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const [movementModal, setMovementModal] = useState<Material | null>(null);
   const [movType, setMovType] = useState<"entrada" | "saida" | "ajuste">("entrada");
@@ -146,6 +149,60 @@ export default function InventoryPage() {
       await loadData();
     } catch {
       showToast("Erro ao registrar movimentação", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEdit(mat: Material) {
+    setEditingId(mat.id);
+    setNewName(mat.name);
+    setNewDesc(mat.description || "");
+    setNewCategory(mat.category);
+    setNewUnit(mat.unit);
+    setNewMinStock(mat.min_stock);
+    setNewCost(mat.cost);
+    setNewSupplier(mat.supplier || "");
+    setNewIsSheet(mat.is_sheet || false);
+    setNewIsEdgeband(mat.is_edgeband || false);
+    setNewSheetW(mat.sheet_width_mm || undefined);
+    setNewSheetH(mat.sheet_height_mm || undefined);
+    setNewWastePercent(mat.waste_percent || 15);
+    setNewPricePerUnit(mat.price_per_unit || undefined);
+    setNewRollLength(mat.roll_length_mm || undefined);
+    setShowEditModal(true);
+  }
+
+  async function handleUpdate() {
+    try {
+      setSaving(true);
+      await updateMaterial(editingId!, {
+        name: newName,
+        description: newDesc || undefined,
+        category: newCategory as Material["category"],
+        unit: newUnit,
+        min_stock: newMinStock,
+        cost: newCost,
+        supplier: newSupplier || undefined,
+        is_sheet: newIsSheet,
+        is_edgeband: newIsEdgeband,
+        sheet_width_mm: newIsSheet ? newSheetW : undefined,
+        sheet_height_mm: newIsSheet ? newSheetH : undefined,
+        waste_percent: newIsSheet ? newWastePercent : undefined,
+        price_per_unit: newIsSheet || newIsEdgeband ? newPricePerUnit : undefined,
+        roll_length_mm: newIsEdgeband ? newRollLength : undefined,
+      });
+      showToast("Material atualizado", "success");
+      setShowEditModal(false);
+      setEditingId(null);
+      setNewName(""); setNewDesc(""); setNewCategory("geral"); setNewUnit("un");
+      setNewMinStock(0); setNewCost(0); setNewSupplier("");
+      setNewIsSheet(false); setNewIsEdgeband(false);
+      setNewSheetW(undefined); setNewSheetH(undefined); setNewWastePercent(15);
+      setNewPricePerUnit(undefined); setNewRollLength(undefined);
+      await loadData();
+    } catch {
+      showToast("Erro ao atualizar", "error");
     } finally {
       setSaving(false);
     }
@@ -261,6 +318,107 @@ export default function InventoryPage() {
         </Card>
       )}
 
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>Editar Material</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-[#8B7A6B]">Nome</label>
+                  <input value={newName} onChange={(e) => setNewName(e.target.value)} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm text-[#8B7A6B]">Categoria</label>
+                  <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm">
+                    {Object.entries(categoryLabels).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-[#8B7A6B]">Unidade</label>
+                  <input value={newUnit} onChange={(e) => setNewUnit(e.target.value)} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm text-[#8B7A6B]">Estoque Mínimo</label>
+                  <input type="number" value={newMinStock} onChange={(e) => setNewMinStock(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-[#8B7A6B]">Custo Unitário</label>
+                  <input type="number" step="0.01" value={newCost} onChange={(e) => setNewCost(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm text-[#8B7A6B]">Fornecedor</label>
+                  <input value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={newIsSheet} onChange={(e) => setNewIsSheet(e.target.checked)} className="accent-[#5B3A29]" />
+                  É chapa (MDF)
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={newIsEdgeband} onChange={(e) => setNewIsEdgeband(e.target.checked)} className="accent-[#5B3A29]" />
+                  É fita de borda
+                </label>
+              </div>
+
+              {newIsSheet && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-[#8B7A6B]">Larg. chapa (mm)</label>
+                    <input type="number" value={newSheetW ?? ""} onChange={(e) => setNewSheetW(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" placeholder="2750" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-[#8B7A6B]">Alt. chapa (mm)</label>
+                    <input type="number" value={newSheetH ?? ""} onChange={(e) => setNewSheetH(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" placeholder="1850" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-[#8B7A6B]">Perda (%)</label>
+                    <input type="number" step="0.1" value={newWastePercent} onChange={(e) => setNewWastePercent(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-[#8B7A6B]">Preço/m²</label>
+                    <input type="number" step="0.01" value={newPricePerUnit ?? ""} onChange={(e) => setNewPricePerUnit(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                  </div>
+                </div>
+              )}
+
+              {newIsEdgeband && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-[#8B7A6B]">Metros do rolo</label>
+                    <input type="number" value={newRollLength ?? ""} onChange={(e) => setNewRollLength(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" placeholder="20" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-[#8B7A6B]">Preço/m linear</label>
+                    <input type="number" step="0.01" value={newPricePerUnit ?? ""} onChange={(e) => setNewPricePerUnit(Number(e.target.value))} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm text-[#8B7A6B]">Descrição</label>
+                <input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className="mt-1 w-full rounded border border-[#D4C4B0] px-3 py-2 text-sm" />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" onClick={() => { setShowEditModal(false); setEditingId(null); }}>Cancelar</Button>
+                <Button onClick={handleUpdate} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-3">
         <Input id="search" label="" placeholder="Buscar material..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
         <div className="flex flex-wrap gap-2">
@@ -302,6 +460,7 @@ export default function InventoryPage() {
                       <p className="text-[10px] text-[#8B7A6B]">Mín: {mat.min_stock} | Custo: {formatCurrency(mat.cost)}</p>
                     </div>
                     <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => handleEdit(mat)}>Editar</Button>
                       <Button size="sm" variant="ghost" onClick={() => { setMovementModal(mat); setMovType("entrada"); }}>+ Entrada</Button>
                       <Button size="sm" variant="ghost" onClick={() => { setMovementModal(mat); setMovType("saida"); }}>- Saída</Button>
                     </div>
