@@ -483,8 +483,11 @@ export default function OrcamentoPage() {
                   className="accent-[#5B3A29] mt-0.5"
                 />
                 <span>
-                  Concordo com a Política de Privacidade e autorizo o uso dos meus dados para
-                  elaboração do orçamento.
+                  Concordo com a{" "}
+                  <a href="/privacidade" className="text-[#5B3A29] underline">
+                    Política de Privacidade
+                  </a>{" "}
+                  e autorizo o uso dos meus dados para elaboração do orçamento.
                 </span>
               </label>
               {errors.privacidade && (
