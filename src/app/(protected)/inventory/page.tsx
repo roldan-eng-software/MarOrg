@@ -52,6 +52,13 @@ export default function InventoryPage() {
   const [newMinStock, setNewMinStock] = useState(0);
   const [newCost, setNewCost] = useState(0);
   const [newSupplier, setNewSupplier] = useState("");
+  const [newIsSheet, setNewIsSheet] = useState(false);
+  const [newIsEdgeband, setNewIsEdgeband] = useState(false);
+  const [newSheetW, setNewSheetW] = useState<number | undefined>();
+  const [newSheetH, setNewSheetH] = useState<number | undefined>();
+  const [newWastePercent, setNewWastePercent] = useState(15);
+  const [newPricePerUnit, setNewPricePerUnit] = useState<number | undefined>();
+  const [newRollLength, setNewRollLength] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
 
   const [movementModal, setMovementModal] = useState<Material | null>(null);
@@ -96,11 +103,21 @@ export default function InventoryPage() {
         min_stock: newMinStock,
         cost: newCost,
         supplier: newSupplier || undefined,
+        is_sheet: newIsSheet,
+        is_edgeband: newIsEdgeband,
+        sheet_width_mm: newIsSheet ? newSheetW : undefined,
+        sheet_height_mm: newIsSheet ? newSheetH : undefined,
+        waste_percent: newIsSheet ? newWastePercent : undefined,
+        price_per_unit: newIsSheet || newIsEdgeband ? newPricePerUnit : undefined,
+        roll_length_mm: newIsEdgeband ? newRollLength : undefined,
       });
       showToast("Material criado com sucesso", "success");
       setShowNewForm(false);
       setNewName(""); setNewDesc(""); setNewCategory("geral"); setNewUnit("un");
       setNewStock(0); setNewMinStock(0); setNewCost(0); setNewSupplier("");
+      setNewIsSheet(false); setNewIsEdgeband(false);
+      setNewSheetW(undefined); setNewSheetH(undefined); setNewWastePercent(15);
+      setNewPricePerUnit(undefined); setNewRollLength(undefined);
       await loadData();
     } catch {
       showToast("Erro ao criar material", "error");
@@ -209,6 +226,32 @@ export default function InventoryPage() {
                 <Input id="cost" label="Custo Unitário" type="number" step="0.01" value={newCost} onChange={(e) => setNewCost(Number(e.target.value))} />
                 <Input id="supplier" label="Fornecedor" value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} />
               </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={newIsSheet} onChange={(e) => setNewIsSheet(e.target.checked)} className="accent-[#5B3A29]" />
+                  É chapa (MDF)
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={newIsEdgeband} onChange={(e) => setNewIsEdgeband(e.target.checked)} className="accent-[#5B3A29]" />
+                  É fita de borda
+                </label>
+              </div>
+
+              {newIsSheet && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Input id="sheet_w" label="Larg. chapa (mm)" type="number" value={newSheetW ?? ""} onChange={(e) => setNewSheetW(Number(e.target.value))} placeholder="2750" />
+                  <Input id="sheet_h" label="Alt. chapa (mm)" type="number" value={newSheetH ?? ""} onChange={(e) => setNewSheetH(Number(e.target.value))} placeholder="1850" />
+                  <Input id="waste" label="Perda (%)" type="number" step="0.1" value={newWastePercent} onChange={(e) => setNewWastePercent(Number(e.target.value))} placeholder="15" />
+                  <Input id="price_unit" label="Preço/m²" type="number" step="0.01" value={newPricePerUnit ?? ""} onChange={(e) => setNewPricePerUnit(Number(e.target.value))} placeholder="0.00" />
+                </div>
+              )}
+
+              {newIsEdgeband && (
+                <div className="grid grid-cols-2 gap-4">
+                  <Input id="roll_len" label="Metros do rolo" type="number" value={newRollLength ?? ""} onChange={(e) => setNewRollLength(Number(e.target.value))} placeholder="20" />
+                  <Input id="edge_price" label="Preço/m linear" type="number" step="0.01" value={newPricePerUnit ?? ""} onChange={(e) => setNewPricePerUnit(Number(e.target.value))} placeholder="0.00" />
+                </div>
+              )}
               <Input id="desc" label="Descrição" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
               <div className="flex justify-end">
                 <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>

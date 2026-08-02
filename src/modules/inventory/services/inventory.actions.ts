@@ -83,6 +83,13 @@ export async function createMaterial(data: {
   min_stock: number;
   cost: number;
   supplier?: string;
+  sheet_width_mm?: number;
+  sheet_height_mm?: number;
+  waste_percent?: number;
+  price_per_unit?: number;
+  roll_length_mm?: number;
+  is_sheet?: boolean;
+  is_edgeband?: boolean;
 }) {
   const supabase = await createClient();
 
@@ -118,7 +125,7 @@ export async function createMaterial(data: {
 
 export async function updateMaterial(
   id: string,
-  data: Partial<Pick<Material, "name" | "description" | "category" | "unit" | "min_stock" | "cost" | "supplier">>
+  data: Partial<Pick<Material, "name" | "description" | "category" | "unit" | "min_stock" | "cost" | "supplier" | "sheet_width_mm" | "sheet_height_mm" | "waste_percent" | "price_per_unit" | "roll_length_mm" | "is_sheet" | "is_edgeband">>
 ) {
   const supabase = await createClient();
 

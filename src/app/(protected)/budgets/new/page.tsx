@@ -20,9 +20,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
+import { CostBreakdown } from "@/components/cost-breakdown";
+import { calculateTemplateCost } from "@/modules/pricing/services/pricing.engine";
 import { FurnitureSelect } from "@/components/furniture-select";
 import { MaterialPicker } from "@/components/material-picker";
-import type { Customer, FurnitureTemplate, Material, Cost, PaymentInterestRate } from "@/types";
+import type { Customer, FurnitureTemplate, Material, Cost, PaymentInterestRate, TemplateCostBreakdown } from "@/types";
 
 interface ItemMaterial {
   materialId: string;
@@ -50,6 +52,8 @@ export default function BudgetNewPage() {
   const [interestRates, setInterestRates] = useState<PaymentInterestRate[]>([]);
   const [installmentPaymentTypes, setInstallmentPaymentTypes] = useState<Record<number, string>>({});
   const [profitMargin, setProfitMargin] = useState(0);
+  const [templateCostBreakdown, setTemplateCostBreakdown] = useState<TemplateCostBreakdown | null>(null);
+  const [calculatingTemplate, setCalculatingTemplate] = useState(false);
 
   const {
     register,
@@ -515,16 +519,30 @@ export default function BudgetNewPage() {
                       onChange={(val) => {
                         setValue(`items.${index}.description`, val);
                       }}
-                      onSelectTemplate={(template: FurnitureTemplate) => {
-                        setValue(`items.${index}.description`, template.name);
-                        if (template.default_material) setValue(`items.${index}.material`, template.default_material);
-                        if (template.default_unit) setValue(`items.${index}.unit`, template.default_unit);
-                        if (template.default_price) setValue(`items.${index}.unit_price`, template.default_price);
-                        if (template.default_width_cm) setValue(`items.${index}.width_cm`, template.default_width_cm);
-                        if (template.default_depth_cm) setValue(`items.${index}.depth_cm`, template.default_depth_cm);
-                        if (template.default_height_cm) setValue(`items.${index}.height_cm`, template.default_height_cm);
-                        if (template.default_finish) setValue(`items.${index}.finish`, template.default_finish);
-                      }}
+                      onSelectTemplate={async (template: FurnitureTemplate) => {
+                          setValue(`items.${index}.description`, template.name);
+                          if (template.default_material) setValue(`items.${index}.material`, template.default_material);
+                          if (template.default_unit) setValue(`items.${index}.unit`, template.default_unit);
+                          if (template.default_price) setValue(`items.${index}.unit_price`, template.default_price);
+                          if (template.default_width_cm) setValue(`items.${index}.width_cm`, template.default_width_cm);
+                          if (template.default_depth_cm) setValue(`items.${index}.depth_cm`, template.default_depth_cm);
+                          if (template.default_height_cm) setValue(`items.${index}.height_cm`, template.default_height_cm);
+                          if (template.default_finish) setValue(`items.${index}.finish`, template.default_finish);
+
+                          setCalculatingTemplate(true);
+                          try {
+                            const breakdown = await calculateTemplateCost(template.id);
+                            setTemplateCostBreakdown(breakdown);
+                            if (manualRawCost === null) {
+                              setManualRawCost(breakdown.totalCost);
+                            }
+                          } catch {
+                            /* template sem receita — usa cálculo manual */
+                            setTemplateCostBreakdown(null);
+                          } finally {
+                            setCalculatingTemplate(false);
+                          }
+                        }}
                       error={errors.items?.[index]?.description?.message}
                     />
                   ) : (
@@ -842,6 +860,8 @@ export default function BudgetNewPage() {
                 <span className="font-semibold text-[#3D2519]">{formatCurrency(totalCost)}</span>
               </div>
             </div>
+
+            <CostBreakdown breakdown={templateCostBreakdown} loading={calculatingTemplate} />
 
             <Input
               id="profit_margin"

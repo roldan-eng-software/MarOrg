@@ -25,10 +25,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
+import { CostBreakdown } from "@/components/cost-breakdown";
+import { calculateTemplateCost } from "@/modules/pricing/services/pricing.engine";
 import { FurnitureSelect } from "@/components/furniture-select";
 import { MaterialPicker } from "@/components/material-picker";
 import { createServiceOrderFromBudget } from "@/modules/service-orders/services/service-orders.actions";
-import type { Customer, BudgetItem, FurnitureTemplate, Material, Cost, PaymentInterestRate } from "@/types";
+import type { Customer, BudgetItem, FurnitureTemplate, Material, Cost, PaymentInterestRate, TemplateCostBreakdown } from "@/types";
 
 interface ItemMaterial {
   materialId: string;
@@ -82,6 +84,8 @@ export default function BudgetEditPage() {
   const [interestRates, setInterestRates] = useState<PaymentInterestRate[]>([]);
   const [installmentPaymentTypes, setInstallmentPaymentTypes] = useState<Record<number, string>>({});
   const [profitMargin, setProfitMargin] = useState(0);
+  const [templateCostBreakdown, setTemplateCostBreakdown] = useState(null as TemplateCostBreakdown | null);
+  const [calculatingTemplate, setCalculatingTemplate] = useState(false);
 
   const {
     register,
@@ -652,7 +656,7 @@ export default function BudgetEditPage() {
                       onChange={(val) => {
                         setValue(`items.${index}.description`, val);
                       }}
-                      onSelectTemplate={(template: FurnitureTemplate) => {
+                      onSelectTemplate={async (template: FurnitureTemplate) => {
                         setValue(`items.${index}.description`, template.name);
                         if (template.default_material) setValue(`items.${index}.material`, template.default_material);
                         if (template.default_unit) setValue(`items.${index}.unit`, template.default_unit);
@@ -661,6 +665,19 @@ export default function BudgetEditPage() {
                         if (template.default_depth_cm) setValue(`items.${index}.depth_cm`, template.default_depth_cm);
                         if (template.default_height_cm) setValue(`items.${index}.height_cm`, template.default_height_cm);
                         if (template.default_finish) setValue(`items.${index}.finish`, template.default_finish);
+
+                        setCalculatingTemplate(true);
+                        try {
+                          const breakdown = await calculateTemplateCost(template.id);
+                          setTemplateCostBreakdown(breakdown);
+                          if (manualRawCost === null) {
+                            setManualRawCost(breakdown.totalCost);
+                          }
+                        } catch {
+                          setTemplateCostBreakdown(null);
+                        } finally {
+                          setCalculatingTemplate(false);
+                        }
                       }}
                       error={errors.items?.[index]?.description?.message}
                       disabled={!canEdit}
@@ -1005,6 +1022,8 @@ export default function BudgetEditPage() {
                 <span className="font-semibold text-[#3D2519]">{formatCurrency(totalCost)}</span>
               </div>
             </div>
+
+            <CostBreakdown breakdown={templateCostBreakdown} loading={calculatingTemplate} />
 
             <Input
               id="profit_margin"

@@ -12,6 +12,22 @@ export const furnitureTemplateSchema = z.object({
   default_height_cm: z.coerce.number().positive("Altura deve ser positiva").optional(),
   default_finish: z.string().optional().or(z.literal("")),
   active: z.boolean().default(true),
+  parts: z
+    .array(
+      z.object({
+        part_type: z.enum(["mdf", "fita_borda", "ferragem", "mao_obra"]),
+        material_id: z.string().uuid().nullable().optional(),
+        name: z.string().min(1, "Nome da peça é obrigatório"),
+        width_mm: z.coerce.number().positive().optional().nullable(),
+        height_mm: z.coerce.number().positive().optional().nullable(),
+        depth_mm: z.coerce.number().positive().optional().nullable(),
+        quantity: z.coerce.number().min(1).default(1),
+        has_edgeband: z.boolean().default(false),
+        edgeband_sides: z.array(z.string()).default(["all"]),
+        sort_order: z.number().default(0),
+      })
+    )
+    .default([]),
 });
 
 export type FurnitureTemplateFormData = z.infer<typeof furnitureTemplateSchema>;

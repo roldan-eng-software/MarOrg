@@ -250,6 +250,43 @@ export interface Material {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  sheet_width_mm: number | null;
+  sheet_height_mm: number | null;
+  waste_percent: number | null;
+  price_per_unit: number | null;
+  roll_length_mm: number | null;
+  is_sheet: boolean;
+  is_edgeband: boolean;
+}
+
+export interface TemplatePart {
+  id: string;
+  template_id: string;
+  part_type: "mdf" | "fita_borda" | "ferragem" | "mao_obra";
+  material_id: string | null;
+  name: string;
+  width_mm: number | null;
+  height_mm: number | null;
+  depth_mm: number | null;
+  quantity: number;
+  has_edgeband: boolean;
+  edgeband_sides: string[];
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TemplateCostBreakdown {
+  mdfCost: number;
+  edgebandCost: number;
+  hardwareCost: number;
+  laborCost: number;
+  totalCost: number;
+  details: {
+    mdfAreaLiquida: number;
+    mdfAreaComPerda: number;
+    edgebandPerimeter: number;
+    hardwareItems: { name: string; quantity: number; cost: number }[];
+  };
 }
 
 export interface StockMovement {
