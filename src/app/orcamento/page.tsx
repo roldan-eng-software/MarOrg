@@ -7,6 +7,8 @@ import {
   budgetRequestSchema,
   type BudgetRequestFormData,
 } from "@/lib/validations/budget-request";
+import { useCep } from "@/lib/utils/cep";
+import { uploadRequestImage } from "@/modules/budget-requests/services/budget-requests.actions";
 
 function showToast(message: string, type: "success" | "error") {
   const toast = document.createElement("div");
@@ -47,6 +49,30 @@ const FURNITURE_TYPES = [
   "Outro",
 ];
 
+const PROJECT_CONTEXTS = [
+  { id: "novo", label: "Ambiente novo / construção" },
+  { id: "substituir", label: "Substituir móveis existentes" },
+  { id: "reforma", label: "Reforma do ambiente" },
+];
+
+const PROPERTY_TYPES = [
+  { id: "apartamento", label: "Apartamento" },
+  { id: "casa", label: "Casa" },
+  { id: "comercio", label: "Comércio" },
+];
+
+const FINISH_COLORS = [
+  "Branco (Clean)",
+  "Off-white (marfim)",
+  "Madeira clara (carvalho/nogueira)",
+  "Madeira escura (ipê/nogal)",
+  "Cinza claro",
+  "Cinza escuro / grafite",
+  "Preto fosco",
+  "Laca colorida",
+  "Não sei / Quero sugestão",
+];
+
 const BUDGET_RANGES = [
   "Prefiro não informar",
   "Até R$ 3.000",
@@ -55,6 +81,12 @@ const BUDGET_RANGES = [
   "Acima de R$ 15.000",
   "Prefiro receber a sugestão",
 ];
+
+function formatCep(digits: string): string {
+  const clean = digits.replace(/\D/g, "").slice(0, 8);
+  if (clean.length <= 5) return clean;
+  return `${clean.slice(0, 5)}-${clean.slice(5)}`;
+}
 
 export default function OrcamentoPage() {
   const [showDialog, setShowDialog] = useState(true);
@@ -68,6 +100,7 @@ export default function OrcamentoPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<BudgetRequestFormData>({
     resolver: zodResolver(budgetRequestSchema),
@@ -83,6 +116,20 @@ export default function OrcamentoPage() {
 
   const tipoMovel = watch("tipo_movel");
   const projeto3d = watch("projeto_3d");
+  const cepDigits = watch("address_zip") || "";
+
+  const { loading: cepLoading, error: cepError, fetchCep } = useCep((data) => {
+    setValue("address_street", data.address_street);
+    setValue("address_neighborhood", data.address_neighborhood);
+    setValue("address_city", data.address_city);
+    setValue("address_state", data.address_state);
+  });
+
+  function handleCepChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+    setValue("address_zip", digits, { shouldValidate: true });
+    if (digits.length === 8) fetchCep(digits);
+  }
 
   async function onSubmit(data: BudgetRequestFormData) {
     try {
@@ -100,6 +147,13 @@ export default function OrcamentoPage() {
       }
 
       const result = await response.json();
+
+      if (fotos.length > 0 && result.requestId) {
+        await Promise.all(
+          fotos.map((foto) => uploadRequestImage(result.requestId, foto))
+        );
+      }
+
       setProtocolo(result.protocolo);
       setSuccess(true);
     } catch (err) {
@@ -189,6 +243,7 @@ export default function OrcamentoPage() {
             <li>Tipo de móvel planejado</li>
             <li>Medidas aprovadas em centímetros</li>
             <li>Preferências de material e acabamento</li>
+            <li>CEP e condições do imóvel</li>
             <li>Contato por e-mail ou WhatsApp</li>
           </ul>
         </section>
@@ -250,6 +305,126 @@ export default function OrcamentoPage() {
                   )}
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#3D2519] mb-1">
+                  CPF/CNPJ <span className="text-[#8B7A6B] font-normal">(opcional, para emissão de nota e contrato)</span>
+                </label>
+                <input
+                  {...register("customer_cpf")}
+                  className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                  placeholder="000.000.000-00"
+                />
+                {errors.customer_cpf && (
+                  <p className="text-xs text-red-500 mt-1">{errors.customer_cpf.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Address & Installation */}
+            <div className="rounded-xl border border-[#D4C4B0] bg-white p-6 space-y-4">
+              <label className="block text-sm font-semibold text-[#3D2519]">Endereço de instalação</label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">CEP</label>
+                  <input
+                    value={formatCep(cepDigits)}
+                    onChange={handleCepChange}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                    placeholder="00000-000"
+                    inputMode="numeric"
+                  />
+                  {cepLoading && (
+                    <p className="text-xs text-[#8B7A6B] mt-1">Buscando endereço...</p>
+                  )}
+                  {cepError && (
+                    <p className="text-xs text-red-500 mt-1">{cepError}</p>
+                  )}
+                  {errors.address_zip && (
+                    <p className="text-xs text-red-500 mt-1">{errors.address_zip.message}</p>
+                  )}
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">Rua</label>
+                  <input
+                    {...register("address_street")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                    placeholder="Rua, avenida..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">Número</label>
+                  <input
+                    {...register("address_number")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                    placeholder="123"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">Complemento</label>
+                  <input
+                    {...register("address_complement")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                    placeholder="Apto, bloco, andar..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">Bairro</label>
+                  <input
+                    {...register("address_neighborhood")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">Cidade</label>
+                  <input
+                    {...register("address_city")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                  />
+                  {errors.address_city && (
+                    <p className="text-xs text-red-500 mt-1">{errors.address_city.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">UF</label>
+                  <input
+                    {...register("address_state")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                    maxLength={2}
+                    placeholder="SP"
+                  />
+                  {errors.address_state && (
+                    <p className="text-xs text-red-500 mt-1">{errors.address_state.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#3D2519] mb-1">Tipo de imóvel</label>
+                <select
+                  {...register("property_type")}
+                  className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] focus:border-[#5B3A29] focus:outline-none"
+                >
+                  <option value="" disabled>
+                    Selecione
+                  </option>
+                  {PROPERTY_TYPES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.property_type && (
+                  <p className="text-xs text-red-500 mt-1">{errors.property_type.message}</p>
+                )}
+              </div>
             </div>
 
             {/* Furniture */}
@@ -286,16 +461,37 @@ export default function OrcamentoPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#3D2519] mb-1">Ambiente de instalação</label>
-                <input
-                  {...register("ambiente")}
-                  className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
-                  placeholder="Quarto do casal"
-                />
-                {errors.ambiente && (
-                  <p className="text-xs text-red-500 mt-1">{errors.ambiente.message}</p>
-                )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">Ambiente de instalação</label>
+                  <input
+                    {...register("ambiente")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                    placeholder="Quarto do casal"
+                  />
+                  {errors.ambiente && (
+                    <p className="text-xs text-red-500 mt-1">{errors.ambiente.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#3D2519] mb-1">Contexto do projeto</label>
+                  <select
+                    {...register("project_context")}
+                    className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] focus:border-[#5B3A29] focus:outline-none"
+                  >
+                    <option value="" disabled>
+                      Selecione
+                    </option>
+                    {PROJECT_CONTEXTS.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.project_context && (
+                    <p className="text-xs text-red-500 mt-1">{errors.project_context.message}</p>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -339,22 +535,41 @@ export default function OrcamentoPage() {
             </div>
 
             {/* Materials */}
-            <div className="rounded-xl border border-[#D4C4B0] bg-white p-6 space-y-3">
-              <label className="block text-sm font-semibold text-[#3D2519]">Material / acabamento</label>
-              {MDF_OPTIONS.map((opt) => (
-                <label
-                  key={opt.id}
-                  className="flex items-center gap-2 text-sm text-[#3D2519] cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    value={opt.label}
-                    {...register("materiais")}
-                    className="accent-[#5B3A29]"
-                  />
-                  {opt.label}
-                </label>
-              ))}
+            <div className="rounded-xl border border-[#D4C4B0] bg-white p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-[#3D2519] mb-2">Material / acabamento</label>
+                <div className="space-y-3">
+                  {MDF_OPTIONS.map((opt) => (
+                    <label
+                      key={opt.id}
+                      className="flex items-center gap-2 text-sm text-[#3D2519] cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        value={opt.label}
+                        {...register("materiais")}
+                        className="accent-[#5B3A29]"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#3D2519] mb-1">Cor / tom do acabamento</label>
+                <input
+                  {...register("finish_color")}
+                  list="finish-colors"
+                  className="w-full rounded border border-[#D4C4B0] bg-white px-3 py-2 text-sm text-[#3D2519] placeholder:text-[#8B7A6B] focus:border-[#5B3A29] focus:outline-none"
+                  placeholder="Selecione ou digite a cor desejada"
+                />
+                <datalist id="finish-colors">
+                  {FINISH_COLORS.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
             </div>
 
             {/* Hardware */}
@@ -523,7 +738,7 @@ export default function OrcamentoPage() {
             </div>
             <button
               onClick={() => setShowDialog(false)}
-              className="w-full rounded-lg bg-[#5B3A29] px＝4 py-2 text-sm font-medium text-white hover:bg-[#3A2519] transition-colors"
+              className="w-full rounded-lg bg-[#5B3A29] px-4 py-2 text-sm font-medium text-white hover:bg-[#3A2519] transition-colors"
             >
               Entendo o que não pedir
             </button>

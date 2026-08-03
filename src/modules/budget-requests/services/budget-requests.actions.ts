@@ -118,6 +118,14 @@ export async function convertBudgetRequest(id: string): Promise<string> {
         full_name: req.customer_name,
         phone: req.customer_phone,
         email: req.customer_email || null,
+        cpf_cnpj: req.customer_cpf || null,
+        address_zip: req.address_zip || null,
+        address_street: req.address_street || null,
+        address_number: req.address_number || null,
+        address_complement: req.address_complement || null,
+        address_neighborhood: req.address_neighborhood || null,
+        address_city: req.address_city || null,
+        address_state: req.address_state || null,
         active: true,
         created_by: user.id,
       })
@@ -142,6 +150,45 @@ export async function convertBudgetRequest(id: string): Promise<string> {
   const hardwareStr = req.hardware.length > 0 ? req.hardware.join(", ") : null;
 
   let notesClient = req.additional_description || "";
+
+  const contextMap: Record<string, string> = {
+    novo: "Ambiente novo / construção",
+    substituir: "Substituir móveis existentes",
+    reforma: "Reforma do ambiente",
+  };
+  if (req.project_context) {
+    notesClient += (notesClient ? "\n" : "") + `Contexto do projeto: ${contextMap[req.project_context] || req.project_context}.`;
+  }
+
+  if (req.finish_color) {
+    notesClient += (notesClient ? "\n" : "") + `Cor/tom do acabamento: ${req.finish_color}.`;
+  }
+
+  const propertyMap: Record<string, string> = {
+    apartamento: "Apartamento",
+    casa: "Casa",
+    comercio: "Comércio",
+  };
+  const addressParts = [
+    req.address_street ? `${req.address_street}, ${req.address_number || "s/n"}` : null,
+    req.address_complement,
+    req.address_neighborhood,
+    req.address_city,
+    req.address_state,
+    req.address_zip,
+  ].filter(Boolean);
+
+  if (addressParts.length > 0) {
+    notesClient +=
+      (notesClient ? "\n" : "") +
+      `Endereço de instalação: ${addressParts.join(", ")}.`;
+  }
+
+  if (req.property_type) {
+    notesClient +=
+      (notesClient ? "\n" : "") +
+      `Tipo de imóvel: ${propertyMap[req.property_type] || req.property_type}.`;
+  }
 
   if (req.budget_range && req.budget_range !== "Prefiro não informar") {
     notesClient += (notesClient ? "\n\n" : "") + `Faixa de orçamento: ${req.budget_range}`;
@@ -310,7 +357,23 @@ export async function uploadRequestImage(
       .from("documents")
       .getPublicUrl(filePath);
 
-    return { url: urlData.publicUrl };
+    const url = urlData.publicUrl;
+
+    const { data: req } = await adminClient
+      .from("budget_requests")
+      .select("image_urls")
+      .eq("id", requestId)
+      .single();
+
+    const current = (req?.image_urls as string[]) || [];
+    const updated = current.includes(url) ? current : [...current, url];
+
+    await adminClient
+      .from("budget_requests")
+      .update({ image_urls: updated })
+      .eq("id", requestId);
+
+    return { url };
   } catch {
     return null;
   }

@@ -76,19 +76,30 @@ export async function POST(request: NextRequest) {
         customer_name: data.nome.trim(),
         customer_email: data.email?.trim() || null,
         customer_phone: data.whatsapp.replace(/\D/g, ""),
+        customer_cpf: data.customer_cpf?.trim() || null,
         preferred_channel: data.canal_preferido,
         furniture_type: data.tipo_movel,
         furniture_other: data.tipo_movel === "Outro" ? data.tipo_movel_outro?.trim() || null : null,
         environment: data.ambiente.trim(),
-        width_cm: data.largura_cm || null,
-        height_cm: data.altura_cm || null,
-        depth_cm: data.profundidade_cm || null,
+        width_cm: data.largura_cm,
+        height_cm: data.altura_cm,
+        depth_cm: data.profundidade_cm,
         materials: data.materiais,
         hardware: data.ferragens,
+        finish_color: data.finish_color?.trim() || null,
+        project_context: data.project_context,
         additional_description: data.descricao?.trim() || null,
         budget_range: data.faixa_orcamento || null,
         needs_3d_project: data.projeto_3d,
         needs_technical_visit: data.visita_tecnica,
+        address_zip: data.address_zip || null,
+        address_street: data.address_street?.trim() || null,
+        address_number: data.address_number?.trim() || null,
+        address_complement: data.address_complement?.trim() || null,
+        address_neighborhood: data.address_neighborhood?.trim() || null,
+        address_city: data.address_city?.trim() || null,
+        address_state: data.address_state?.toUpperCase().trim() || null,
+        property_type: data.property_type,
       })
       .select("*")
       .single();
@@ -100,6 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       protocolo: created.request_number,
+      requestId: created.id,
     });
   } catch {
     return NextResponse.json({ error: "Erro ao processar requisição" }, { status: 500 });

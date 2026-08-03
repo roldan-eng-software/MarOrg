@@ -118,12 +118,47 @@ export default function ConvertBudgetRequestPage() {
               </p>
             </div>
             <div>
+              <p className="text-sm font-medium text-[#3D2519]">CPF/CNPJ</p>
+              <p className="text-[#8B7A6B]">{request.customer_cpf || "Não informado"}</p>
+            </div>
+            <div>
               <p className="text-sm font-medium text-[#3D2519]">Data do pedido</p>
               <p className="text-[#8B7A6B]">{formatDate(request.created_at)}</p>
             </div>
           </div>
 
           <hr className="border-[#D4C4B0]" />
+
+          {(request.address_street ||
+            request.address_city ||
+            request.property_type) && (
+            <div>
+              <p className="text-sm font-medium text-[#3D2519]">Endereço de instalação</p>
+              <p className="text-[#8B7A6B]">
+                {[
+                  request.address_street,
+                  request.address_number && `Nº ${request.address_number}`,
+                  request.address_complement,
+                  request.address_neighborhood,
+                  request.address_city,
+                  request.address_state,
+                  request.address_zip,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "Não informado"}
+              </p>
+              {request.property_type && (
+                <p className="text-[#8B7A6B]">
+                  Tipo de imóvel:{" "}
+                  {request.property_type === "apartamento"
+                    ? "Apartamento"
+                    : request.property_type === "casa"
+                      ? "Casa"
+                      : "Comércio"}
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <p className="text-sm font-medium text-[#3D2519]">Tipo de móvel</p>
@@ -137,6 +172,20 @@ export default function ConvertBudgetRequestPage() {
             <p className="text-sm font-medium text-[#3D2519]">Ambiente</p>
             <p className="text-[#8B7A6B]">{request.environment}</p>
           </div>
+
+          {request.project_context && (
+            <div>
+              <p className="text-sm font-medium text-[#3D2519]">Contexto do projeto</p>
+              <p className="text-[#8B7A6B]">
+                {request.project_context === "novo"
+                  ? "Ambiente novo / construção"
+                  : request.project_context === "substituir"
+                    ? "Substituir móveis existentes"
+                    : "Reforma do ambiente"}
+              </p>
+            </div>
+          )}
+
           {(request.width_cm || request.height_cm || request.depth_cm) && (
             <div>
               <p className="text-sm font-medium text-[#3D2519]">Medidas (cm)</p>
@@ -152,6 +201,13 @@ export default function ConvertBudgetRequestPage() {
             <div>
               <p className="text-sm font-medium text-[#3D2519]">Materiais</p>
               <p className="text-[#8B7A6B]">{request.materials.join(", ")}</p>
+            </div>
+          )}
+
+          {request.finish_color && (
+            <div>
+              <p className="text-sm font-medium text-[#3D2519]">Cor / tom do acabamento</p>
+              <p className="text-[#8B7A6B]">{request.finish_color}</p>
             </div>
           )}
 

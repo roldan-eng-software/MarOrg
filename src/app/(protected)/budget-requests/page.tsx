@@ -77,6 +77,12 @@ export default function BudgetRequestsPage() {
                         : req.furniture_type}{" "}
                       — {req.environment}
                     </p>
+                    {(req.address_city || req.address_state) && (
+                      <p className="text-sm text-[#8B7A6B]">
+                        {[req.address_city, req.address_state].filter(Boolean).join(" - ")}
+                        {req.property_type ? ` · ${req.property_type}` : ""}
+                      </p>
+                    )}
                     {req.additional_description && (
                       <p className="text-xs text-[#8B7A6B] line-clamp-2">{req.additional_description}</p>
                     )}

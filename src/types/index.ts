@@ -384,6 +384,7 @@ export interface BudgetRequest {
   customer_name: string;
   customer_email: string | null;
   customer_phone: string;
+  customer_cpf: string | null;
   preferred_channel: "whatsapp" | "email" | null;
   furniture_type: string;
   furniture_other: string | null;
@@ -398,6 +399,16 @@ export interface BudgetRequest {
   needs_3d_project: boolean;
   needs_technical_visit: boolean;
   image_urls: string[];
+  address_zip: string | null;
+  address_street: string | null;
+  address_number: string | null;
+  address_complement: string | null;
+  address_neighborhood: string | null;
+  address_city: string | null;
+  address_state: string | null;
+  property_type: "apartamento" | "casa" | "comercio" | null;
+  finish_color: string | null;
+  project_context: "novo" | "substituir" | "reforma" | null;
   created_at: string;
   converted_at: string | null;
   converted_budget_id: string | null;
