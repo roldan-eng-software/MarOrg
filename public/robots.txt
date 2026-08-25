@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /budgets/
+Disallow: /customers/
+Disallow: /portal/
+Disallow: /schedule/
+Disallow: /financial/
+Disallow: /inventory/
+Disallow: /reports/
+Disallow: /settings/
+Disallow: /service-orders/
+Disallow: /suppliers/
+Disallow: /furniture-templates/
+Disallow: /payment-settings/
+Disallow: /costs/
+Disallow: /offline/
+
+Sitemap: https://mar-org.vercel.app/sitemap.xml

@@ -1,8 +1,8 @@
 {
   "name": "Roldan Marcenaria",
   "short_name": "Roldan",
-  "description": "Sistema de gestão para marcenaria sob medida",
-  "start_url": "/dashboard",
+  "description": "Móveis planejados sob medida com qualidade e acabamento impecável",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#F5F0EB",
   "theme_color": "#5B3A29",

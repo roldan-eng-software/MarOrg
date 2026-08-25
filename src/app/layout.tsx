@@ -1,11 +1,28 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Roldan Marcenaria — Sistema de Gestão",
-  description: "Sistema de gestão para marcenaria sob medida",
+  metadataBase: new URL("https://mar-org.vercel.app"),
+  title: {
+    default: "Roldan Marcenaria — Móveis Planejados Sob Medida",
+    template: "%s | Roldan Marcenaria",
+  },
+  description:
+    "Móveis planejados sob medida com qualidade, precisão e acabamento impecável. Cozinhas, guarda-roupas, home offices e mais. Solicite seu orçamento.",
+  keywords: [
+    "móveis planejados",
+    "marcenaria sob medida",
+    "cozinha planejada",
+    "guarda-roupa planejado",
+    "home office",
+    "closet",
+    "marcenaria",
+    "móveis sob medida",
+  ],
+  authors: [{ name: "Roldan Marcenaria" }],
   icons: {
     icon: "/favicon.svg",
   },
@@ -20,9 +37,20 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
+    locale: "pt_BR",
+    url: "https://mar-org.vercel.app",
     siteName: "Roldan Marcenaria",
-    title: "Roldan Marcenaria — Sistema de Gestão",
-    description: "Sistema de gestão para marcenaria sob medida",
+    title: "Roldan Marcenaria — Móveis Planejados Sob Medida",
+    description:
+      "Móveis planejados sob medida com qualidade e acabamento impecável. Solicite seu orçamento.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 };
 
@@ -49,6 +77,18 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="antialiased">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-SF9Z2E7EMT"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-SF9Z2E7EMT');
+          `}
+        </Script>
         {children}
         <script
           dangerouslySetInnerHTML={{
