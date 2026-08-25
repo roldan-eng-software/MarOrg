@@ -111,7 +111,7 @@ export default function Hero() {
 
       {/* Hero Section */}
       <section className="hero-bg relative bg-cover bg-center bg-no-repeat pt-24 pb-16 md:pt-32 md:pb-24">
-        <div className="absolute inset-0 bg-[#3D2519]/70" />
+        <div className="absolute inset-0 bg-black/30" />
         <div className="relative mx-auto max-w-4xl px-4 md:px-8 text-center space-y-6">
           <p className="text-sm text-[#D4C4B0] uppercase tracking-wide">
             Móveis planejados sob medida
