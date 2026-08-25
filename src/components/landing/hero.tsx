@@ -110,18 +110,19 @@ export default function Hero() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-[#F5F0EB] pt-24 pb-16 md:pt-32 md:pb-24">
-        <div className="mx-auto max-w-4xl px-4 md:px-8 text-center space-y-6">
-          <p className="text-sm text-[#8B7A6B] uppercase tracking-wide">
+      <section className="hero-bg relative bg-cover bg-center bg-no-repeat pt-24 pb-16 md:pt-32 md:pb-24">
+        <div className="absolute inset-0 bg-[#3D2519]/70" />
+        <div className="relative mx-auto max-w-4xl px-4 md:px-8 text-center space-y-6">
+          <p className="text-sm text-[#D4C4B0] uppercase tracking-wide">
             Móveis planejados sob medida
           </p>
 
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#3D2519] leading-tight">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">
             Móveis planejados que transformam espaços em ambientes únicos,
             funcionais e feitos para você.
           </h1>
 
-          <p className="text-lg text-[#8B7A6B] max-w-2xl mx-auto">
+          <p className="text-lg text-[#D4C4B0] max-w-2xl mx-auto">
             Do projeto à instalação, cuidamos de cada detalhe para criar móveis
             sob medida com qualidade, precisão e acabamento impecável.
           </p>

@@ -23,7 +23,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-[#5B3A29] mt-6 pt-6 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Roldan Marcenaria. Todos os direitos reservados.</p>
+          <p>&copy; 2026 Roldan Marcenaria. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
