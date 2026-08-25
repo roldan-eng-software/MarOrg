@@ -6,6 +6,9 @@ node_modules/
 
 # testing
 coverage/
+.playwright-mcp/
+test-results/
+playwright-report/
 
 # next.js
 .next/
@@ -32,3 +35,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# opencode
+.opencode/
+
+# speckit
+.specify/
