@@ -24,6 +24,17 @@ export default function Footer() {
 
         <div className="border-t border-[#5B3A29] mt-6 pt-6 text-center text-sm">
           <p>&copy; 2026 Roldan Marcenaria. Todos os direitos reservados.</p>
+          <p className="mt-2 text-xs text-[#8B7A6B]">
+            Desenvolvido por:{" "}
+            <a
+              href="https://chegounaweb.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors underline"
+            >
+              Roldan Eng Software
+            </a>
+          </p>
         </div>
       </div>
     </footer>
