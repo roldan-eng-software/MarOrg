@@ -1,7 +1,6 @@
 import Hero from "@/components/landing/hero";
 import Sobre from "@/components/landing/sobre";
 import Servicos from "@/components/landing/servicos";
-import Galeria from "@/components/landing/galeria";
 import Contato from "@/components/landing/contato";
 import Footer from "@/components/landing/footer";
 
@@ -17,7 +16,6 @@ export default function Home() {
       <Hero />
       <Sobre />
       <Servicos />
-      <Galeria />
       <Contato />
       <Footer />
     </main>

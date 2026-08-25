@@ -23,9 +23,6 @@ export default function Hero() {
             <a href="#servicos" className="hover:underline">
               Serviços
             </a>
-            <a href="#galeria" className="hover:underline">
-              Galeria
-            </a>
             <a href="#contato" className="hover:underline">
               Contato
             </a>
@@ -84,13 +81,6 @@ export default function Hero() {
               onClick={() => setMenuOpen(false)}
             >
               Serviços
-            </a>
-            <a
-              href="#galeria"
-              className="block hover:underline"
-              onClick={() => setMenuOpen(false)}
-            >
-              Galeria
             </a>
             <a
               href="#contato"
